@@ -1,0 +1,63 @@
+{
+  "name": "dzbike-miniprogram",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DZBike WeChat Mini Program",
+  "templateInfo": {
+    "name": "default",
+    "typescript": true,
+    "css": "sass",
+    "framework": "react"
+  },
+  "scripts": {
+    "postinstall": "node scripts/patch-taro-components.js && node scripts/generate-action-icons.js && node scripts/generate-menu-icons.js && node scripts/generate-tabbar-icons.js --force",
+    "build:weapp": "cross-env NODE_ENV=development taro build --type weapp",
+    "build:weapp:prod": "cross-env NODE_ENV=production taro build --type weapp",
+    "dev:weapp": "cross-env NODE_ENV=development taro build --type weapp --watch",
+    "build:h5": "taro build --type h5",
+    "dev:h5": "npm run build:h5 -- --watch"
+  },
+  "browserslist": [
+    "last 3 versions",
+    "Android >= 4.1",
+    "ios >= 8"
+  ],
+  "dependencies": {
+    "@babel/runtime": "^7.24.4",
+    "@nutui/icons-react-taro": "^1.0.5",
+    "@nutui/nutui-react-taro": "^2.6.22",
+    "@tarojs/components": "4.0.9",
+    "@tarojs/helper": "4.0.9",
+    "@tarojs/plugin-framework-react": "4.0.9",
+    "@tarojs/plugin-platform-weapp": "4.0.9",
+    "@tarojs/react": "4.0.9",
+    "@tarojs/runtime": "4.0.9",
+    "@tarojs/shared": "4.0.9",
+    "@tarojs/taro": "4.0.9",
+    "dayjs": "^1.11.13",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zustand": "^4.5.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.4",
+    "@babel/plugin-proposal-class-properties": "^7.14.5",
+    "@babel/preset-react": "^7.24.1",
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.5.13",
+    "@tarojs/cli": "^4.0.9",
+    "@tarojs/taro-loader": "^4.0.9",
+    "@tarojs/webpack5-runner": "4.0.9",
+    "@types/react": "^18.2.61",
+    "babel-preset-taro": "4.0.9",
+    "cross-env": "^7.0.3",
+    "css-loader": "^7.1.4",
+    "mini-css-extract-plugin": "^2.10.2",
+    "pngjs": "^7.0.0",
+    "postcss": "^8.5.26",
+    "sass": "^1.75.0",
+    "sass-loader": "^16.0.8",
+    "tsconfig-paths-webpack-plugin": "^4.2.0",
+    "typescript": "^5.4.5",
+    "webpack": "^5.91.0"
+  }
+}

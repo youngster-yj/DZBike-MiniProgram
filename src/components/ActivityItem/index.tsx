@@ -1,0 +1,45 @@
+import { View, Text, Image } from '@tarojs/components';
+import Taro from '@tarojs/taro';
+import { API } from '@/services/types';
+import { formatDateTime } from '@/utils/timeUtil';
+import officialBg from '@/assets/activity/official.png';
+import personalBg from '@/assets/activity/personal.png';
+
+interface ActivityItemProps {
+  data: API.ActivityListItemResponse;
+}
+
+export function ActivityItem({ data }: ActivityItemProps) {
+  const isPersonal = data.source === 'personal';
+  const bg = isPersonal ? personalBg : officialBg;
+
+  const onDetail = () => {
+    Taro.navigateTo({ url: `/pages/activity/bike/index?activity_id=${data._id}` });
+  };
+
+  return (
+    <View className="ActivityItem-ActivityItem-card" onClick={onDetail}>
+      <Image className="ActivityItem-ActivityItem-bg" src={bg} mode="aspectFill" />
+      <View className="ActivityItem-ActivityItem-overlay" />
+      <View className="ActivityItem-ActivityItem-main">
+        <View className="ActivityItem-ActivityItem-header">
+          <Text className="ActivityItem-ActivityItem-creator">发起人：{data.name}</Text>
+          {data.joinCount > 0 && (
+            <Text className="ActivityItem-ActivityItem-joinCount">
+              已参加 <Text className="ActivityItem-ActivityItem-joinNum">{data.joinCount}</Text> 人
+            </Text>
+          )}
+        </View>
+        <View className="ActivityItem-ActivityItem-content">
+          <Text className="ActivityItem-ActivityItem-title">{data.title}</Text>
+        </View>
+        <View className="ActivityItem-ActivityItem-footer">
+          <Text>{formatDateTime(data.time)}</Text>
+          <Text className={`ActivityItem-ActivityItem-tag${isPersonal ? ' ActivityItem-ActivityItem-tagPersonal' : ''}`}>
+            {isPersonal ? '个人活动' : '官方活动'}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
