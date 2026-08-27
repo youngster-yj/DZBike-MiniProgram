@@ -46,11 +46,23 @@ npm run dev:weapp
 3. 用微信开发者工具**导入项目**，目录选择 **`dist/`**（推荐）
 
    - `dist/project.config.json` 的 `miniprogramRoot` 为 `./`，与 Taro 编译产物一致
-   - 若改为打开**项目根目录**（`miniprogramRoot: dist/`），需确保 `project.private.config.json` 中 `ignoreDevUnusedFiles` 为 `false`，否则可能出现全 Tab 白屏
+   - 每次 `npm run build:weapp` 会自动同步 `dist/project.private.config.json`（含 `ignoreDevUnusedFiles: false`）
+   - 若改为打开**项目根目录**（`miniprogramRoot: dist/`），需确保根目录 `project.private.config.json` 中 `ignoreDevUnusedFiles` 为 `false`，否则可能出现全 Tab 白屏
+   - **调试基础库**建议使用 **3.6.x**（已在私有配置中固定为 `3.6.3`）；不建议使用 3.17+，易触发 `appLaunch with non-empty page stack` 导致白屏
 
 4. 修改配置或首次打开后：**工具 → 清缓存 → 全部清除 → 重新编译**
 
 5. 开发阶段勾选：**详情 → 本地设置 → 不校验合法域名、web-view、TLS 版本以及 HTTPS 证书**
+
+### 白屏排查
+
+若导航栏/TabBar 正常但内容区全白：
+
+1. **工具 → 清缓存 → 全部清除**，重新编译
+2. 确认 **`ignoreDevUnusedFiles: false`**（根目录或 `dist/project.private.config.json`）
+3. **详情 → 本地设置 → 调试基础库** 选 **3.6.x**（勿用 3.17+）
+4. 重新编译：`npm run build:weapp`（会自动 sync 私有配置到 dist）
+5. watch 模式下若首次打开 dist 白屏，可手动执行：`npm run sync:devtools`
 
 ### 生产构建
 

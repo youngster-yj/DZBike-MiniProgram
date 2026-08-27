@@ -3,6 +3,9 @@ page {
   color: #1e293b;
   font-size: 28px;
   line-height: 1.5;
+  --dz-icon-phone: #3182ce;
+  --dz-icon-wechat: #07c160;
+  --dz-icon-nav: #0ea5e9;
 }
 
 :root {
@@ -12,6 +15,9 @@ page {
   --dz-text-sub: #64748b;
   --dz-border: #e2e8f0;
   --dz-page-bg: #f1f5f9;
+  --dz-icon-phone: #3182ce;
+  --dz-icon-wechat: #07c160;
+  --dz-icon-nav: #0ea5e9;
 }
 
 .section-title {
@@ -464,12 +470,39 @@ button[size='mini'][type='primary'] {
 .StoreAddressCard-StoreAddressCard-actionIcon {
   width: 30rpx;
   height: 30rpx;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.StoreAddressCard-StoreAddressCard-actionBtn:active {
+.StoreAddressCard-StoreAddressCard-actionBtnPhone .nut-icon,
+.StoreAddressCard-StoreAddressCard-actionBtnPhone .nutui-iconfont {
+  color: #3182ce !important;
+}
+
+.StoreAddressCard-StoreAddressCard-actionBtnWechat .nut-icon,
+.StoreAddressCard-StoreAddressCard-actionBtnWechat .nutui-iconfont {
+  color: #07c160 !important;
+}
+
+.StoreAddressCard-StoreAddressCard-actionBtnNav .nut-icon,
+.StoreAddressCard-StoreAddressCard-actionBtnNav .nutui-iconfont {
+  color: #0ea5e9 !important;
+}
+
+.StoreAddressCard-StoreAddressCard-actionBtnPhone:active {
   background: rgba(49, 130, 206, 0.1);
   border-color: rgba(49, 130, 206, 0.35);
+}
+
+.StoreAddressCard-StoreAddressCard-actionBtnWechat:active {
+  background: rgba(7, 193, 96, 0.1);
+  border-color: rgba(7, 193, 96, 0.35);
+}
+
+.StoreAddressCard-StoreAddressCard-actionBtnNav:active {
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(14, 165, 233, 0.35);
 }
 
 
@@ -518,40 +551,71 @@ button[size='mini'][type='primary'] {
   justify-content: space-between;
   margin-top: 12px;
   gap: 8px;
+  min-height: 32px;
 }
 
 .StoreItem-StoreItem-price {
   flex: 1;
+  display: flex;
+  align-items: baseline;
   font-size: 30px;
   color: #ea580c;
   font-weight: 600;
+  line-height: 1;
 }
 
 .StoreItem-StoreItem-priceIcon {
   font-size: 22px;
   font-weight: 600;
+  line-height: 1;
 }
 
 .StoreItem-StoreItem-phoneBtn {
   flex-shrink: 0;
   display: flex;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
+  gap: 4px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 999px;
   box-sizing: border-box;
 }
 
 .StoreItem-StoreItem-phoneBtn:active {
-  background: rgba(49, 130, 206, 0.1);
+  background: rgba(49, 130, 206, 0.08);
+}
+
+.StoreItem-StoreItem-phoneBtn:active .StoreItem-StoreItem-phoneLabel {
+  color: #3182ce;
 }
 
 .StoreItem-StoreItem-phoneIcon {
-  width: 36px;
-  height: 36px;
-  display: block;
+  width: 14px;
+  height: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.StoreItem-StoreItem-phoneLabel {
+  font-size: 22px;
+  color: #94a3b8;
+  line-height: 22px;
+  height: 22px;
+  transform: translateY(-1px);
+}
+
+.StoreItem-StoreItem-phoneBtn .nut-icon,
+.StoreItem-StoreItem-phoneBtn .nutui-iconfont {
+  color: #94a3b8 !important;
+}
+
+.StoreItem-StoreItem-phoneBtn:active .nut-icon,
+.StoreItem-StoreItem-phoneBtn:active .nutui-iconfont {
+  color: #3182ce !important;
 }
 
 
@@ -677,17 +741,31 @@ button[size='mini'][type='primary'] {
   margin-top: 20px;
 }
 
-.activity-bike-index-rowBtns {
-  display: flex;
-  gap: 12px;
+.activity-bike-index-phoneResult {
   margin-top: 16px;
+  padding: 20px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 16px;
 }
 
-.activity-bike-index-phone {
+.activity-bike-index-phoneResultLabel {
   display: block;
-  margin-top: 12px;
+  font-size: 24px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.activity-bike-index-phoneResultValue {
+  display: block;
+  font-size: 30px;
   color: #3182ce;
-  font-size: 26px;
+  font-weight: 500;
+}
+
+.activity-bike-index-modalActionsDivider {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 16px;
 }
 
 .activity-bike-index-disclaimer {
@@ -698,7 +776,6 @@ button[size='mini'][type='primary'] {
 }
 
 .activity-bike-index-detailPage {
-  min-height: 100vh;
   background: #f1f5f9;
   padding-bottom: calc(120rpx + env(safe-area-inset-bottom, 0px));
 }
@@ -740,7 +817,7 @@ button[size='mini'][type='primary'] {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
 }
 
 .activity-bike-index-tag {
@@ -774,19 +851,22 @@ button[size='mini'][type='primary'] {
 .activity-bike-index-infoList {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
 }
 
 .activity-bike-index-infoItem {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 16px;
+  padding: 22px 0;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.activity-bike-index-infoItemBlock {
-  flex-direction: column;
-  gap: 8px;
+.activity-bike-index-infoItem:last-child {
+  border-bottom: none;
+  padding-bottom: 24px;
 }
 
 .activity-bike-index-infoLabel {
@@ -794,56 +874,83 @@ button[size='mini'][type='primary'] {
   width: 168px;
   font-size: 26px;
   color: #94a3b8;
+  line-height: 1.5;
 }
 
 .activity-bike-index-infoValue {
   flex: 1;
+  min-width: 0;
   font-size: 28px;
   color: #1e293b;
+  line-height: 1.5;
 }
 
-.activity-bike-index-infoBlock {
-  font-size: 28px;
-  color: #475569;
-  line-height: 1.7;
+.activity-bike-index-infoValueBlock {
+  line-height: 1.65;
+  white-space: pre-wrap;
 }
 
 .activity-bike-index-phoneRow {
-  flex: 1;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  width: 100%;
+}
+
+.activity-bike-index-phoneNumber {
+  flex: 1;
+  min-width: 0;
+  font-size: 28px;
+  color: #1e293b;
+  line-height: 1.5;
 }
 
 .activity-bike-index-phoneBtn {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #eff6ff;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.activity-bike-index-phoneBtn:active {
+  background: rgba(22, 163, 74, 0.1);
 }
 
 .activity-bike-index-phoneBtnIcon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.activity-bike-index-phoneBtn .nut-icon,
+.activity-bike-index-phoneBtn .nutui-iconfont {
+  color: #16a34a !important;
 }
 
 .activity-bike-index-prizeBox {
+  width: 100%;
+  box-sizing: border-box;
   border-left: 6px solid #f97316;
   background: #fff7ed;
-  padding: 16px 20px;
-  border-radius: 12px;
+  padding: 20px 24px;
+  border-radius: 16px;
 }
 
 .activity-bike-index-prizeText {
-  font-size: 28px;
+  font-size: 26px;
   color: #9a3412;
-  line-height: 1.6;
+  line-height: 1.65;
+  white-space: pre-wrap;
 }
 
 .activity-bike-index-joinBox {
@@ -1916,8 +2023,8 @@ button[size='mini'][type='primary'] {
 }
 
 .MobileMenuList-MobileMenuList-arrow {
-  width: 36rpx;
-  height: 36rpx;
+  width: 56rpx;
+  height: 56rpx;
   flex-shrink: 0;
   margin-left: auto;
 }

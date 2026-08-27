@@ -20,13 +20,13 @@ import { EmptyState } from '@/components/EmptyState';
 import { TimelinessToolbar } from '@/components/TimelinessToolbar';
 import { ActivityDisclaimer } from '@/components/ActivityDisclaimer';
 import { FormDateTimePicker, buildTimestamp } from '@/components/FormDateTimePicker';
-import { formatDateTime, maskPhone, isTimestampFuture } from '@/utils/timeUtil';
+import { formatDateTime, isTimestampFuture } from '@/utils/timeUtil';
 import { judgeName, judgePhone, showSuccess, showError } from '@/utils/helpers';
 import { ApiError } from '@/services/request';
 import { requestActivityAuditSubscribe } from '@/utils/wxSubscribe';
 import officialBg from '@/assets/activity/official.png';
 import personalBg from '@/assets/activity/personal.png';
-import phoneIcon from '@/assets/icons/phone.png';
+import { Phone } from '@nutui/icons-react-taro';
 
 const TIMELINESS_VALUES: Array<'underway' | 'finished'> = ['underway', 'finished'];
 
@@ -70,7 +70,9 @@ export default function BikeActivityPage() {
 
   const [showJoinList, setShowJoinList] = useState(false);
 
-  const [showPublisher, setShowPublisher] = useState(false);
+  const [showJoinListVerify, setShowJoinListVerify] = useState(false);
+
+  const [showPhoneKey, setShowPhoneKey] = useState(false);
 
   const [joinList, setJoinList] = useState<API.JoinDataProps[]>([]);
 
@@ -86,7 +88,9 @@ export default function BikeActivityPage() {
 
   const [joinForm, setJoinForm] = useState({ name: '', phone: '', key: '' });
 
-  const [creatorForm, setCreatorForm] = useState({ name: '', phone: '', key: '' });
+  const [joinListForm, setJoinListForm] = useState({ name: '', phone: '' });
+
+  const [phoneKeyForm, setPhoneKeyForm] = useState({ key: '' });
 
   const [organizerPhone, setOrganizerPhone] = useState('');
 
@@ -309,13 +313,7 @@ export default function BikeActivityPage() {
 
     if (!detail) return;
 
-    const nameErr = judgeName(creatorForm.name);
-
-    const phoneErr = judgePhone(creatorForm.phone);
-
-    if (nameErr !== true) return showError(String(nameErr));
-
-    if (phoneErr !== true) return showError(String(phoneErr));
+    if (!phoneKeyForm.key) return showError('请输入口令');
 
     try {
 
@@ -323,11 +321,17 @@ export default function BikeActivityPage() {
 
         activityId: detail._id,
 
-        ...creatorForm,
+        key: phoneKeyForm.key,
 
       });
 
-      if (res.ok) setOrganizerPhone(res.data);
+      if (res.ok) {
+
+        showSuccess('手机号获取成功');
+
+        setOrganizerPhone(res.data);
+
+      }
 
     } catch (e) {
 
@@ -343,19 +347,33 @@ export default function BikeActivityPage() {
 
     if (!detail) return;
 
+    const nameErr = judgeName(joinListForm.name);
+
+    const phoneErr = judgePhone(joinListForm.phone);
+
+    if (nameErr !== true) return showError(String(nameErr));
+
+    if (phoneErr !== true) return showError(String(phoneErr));
+
     try {
 
       const res = await fetchJoinList({
 
         activityId: detail._id,
 
-        ...creatorForm,
+        name: joinListForm.name,
+
+        phone: joinListForm.phone,
 
       });
 
       if (res.ok) {
 
+        showSuccess('信息获取成功');
+
         setJoinList(res.data);
+
+        setShowJoinListVerify(false);
 
         setShowJoinList(true);
 
@@ -366,6 +384,18 @@ export default function BikeActivityPage() {
       showApiError(e, '获取失败');
 
     }
+
+  };
+
+
+
+  const openPhoneKeyModal = () => {
+
+    setOrganizerPhone('');
+
+    setPhoneKeyForm({ key: '' });
+
+    setShowPhoneKey(true);
 
   };
 
@@ -433,12 +463,16 @@ export default function BikeActivityPage() {
 
                 <Text className="activity-bike-index-infoLabel">联系电话</Text>
 
-                <View className="activity-bike-index-phoneRow">
+                <View className="activity-bike-index-infoValue">
 
-                  <Text className="activity-bike-index-infoValue">{maskPhone(detail.phone)}</Text>
+                  <View className="activity-bike-index-phoneRow">
 
-                  <View className="activity-bike-index-phoneBtn" onClick={() => setShowPublisher(true)}>
-                    <Image className="activity-bike-index-phoneBtnIcon" src={phoneIcon} mode="aspectFit" />
+                    <Text className="activity-bike-index-phoneNumber">{detail.phone}</Text>
+
+                    <View className="activity-bike-index-phoneBtn" onClick={openPhoneKeyModal}>
+                      <Phone className="activity-bike-index-phoneBtnIcon" style={{ color: '#16a34a' }} size={14} />
+                    </View>
+
                   </View>
 
                 </View>
@@ -465,23 +499,27 @@ export default function BikeActivityPage() {
 
               ) : null}
 
-              <View className="activity-bike-index-infoItem activity-bike-index-infoItemBlock">
+              <View className="activity-bike-index-infoItem">
 
                 <Text className="activity-bike-index-infoLabel">活动简介</Text>
 
-                <Text className="activity-bike-index-infoBlock">{detail.content}</Text>
+                <Text className="activity-bike-index-infoValue activity-bike-index-infoValueBlock">{detail.content}</Text>
 
               </View>
 
               {detail.prize ? (
 
-                <View className="activity-bike-index-infoItem activity-bike-index-infoItemBlock">
+                <View className="activity-bike-index-infoItem">
 
                   <Text className="activity-bike-index-infoLabel">活动奖品</Text>
 
-                  <View className="activity-bike-index-prizeBox">
+                  <View className="activity-bike-index-infoValue">
 
-                    <Text className="activity-bike-index-prizeText">{detail.prize}</Text>
+                    <View className="activity-bike-index-prizeBox">
+
+                      <Text className="activity-bike-index-prizeText">{detail.prize}</Text>
+
+                    </View>
 
                   </View>
 
@@ -525,7 +563,7 @@ export default function BikeActivityPage() {
 
                 ))}
 
-                <View className="activity-bike-index-publisherLink" onClick={() => setShowPublisher(true)}>
+                <View className="activity-bike-index-publisherLink" onClick={() => setShowJoinListVerify(true)}>
 
                   <Text>查看参与详情</Text>
 
@@ -593,31 +631,79 @@ export default function BikeActivityPage() {
 
 
 
-        {showPublisher && (
+        {showJoinListVerify && (
 
           <View className="activity-bike-index-modal">
 
             <View className="activity-bike-index-modalBody">
 
-              <Text className="activity-bike-index-modalTitle">发布者验证</Text>
+              <Text className="activity-bike-index-modalTitle">获取参与人员信息</Text>
 
-              <Input className="form-input" placeholder="创建时姓名" value={creatorForm.name} onInput={(e) => setCreatorForm({ ...creatorForm, name: e.detail.value })} />
+              <Input className="form-input" placeholder="请输入姓名或昵称" value={joinListForm.name} onInput={(e) => setJoinListForm({ ...joinListForm, name: e.detail.value })} />
 
-              <Input className="form-input" placeholder="创建时手机号" type="number" value={creatorForm.phone} onInput={(e) => setCreatorForm({ ...creatorForm, phone: e.detail.value })} />
+              <Input className="form-input" placeholder="请输入电话号" type="number" value={joinListForm.phone} onInput={(e) => setJoinListForm({ ...joinListForm, phone: e.detail.value })} />
 
-              <Input className="form-input" placeholder="活动口令" value={creatorForm.key} onInput={(e) => setCreatorForm({ ...creatorForm, key: e.detail.value })} />
+              <View className="activity-bike-index-modalActions">
 
-              <View className="activity-bike-index-rowBtns">
+                <Button size="mini" onClick={() => setShowJoinListVerify(false)}>取消</Button>
 
-                <Button size="mini" onClick={onFetchPhone}>查看组织者电话</Button>
-
-                <Button size="mini" onClick={onFetchJoinList}>查看完整报名</Button>
+                <Button size="mini" type="primary" className="button-primary" onClick={onFetchJoinList}>提交</Button>
 
               </View>
 
-              {organizerPhone ? <Text className="activity-bike-index-phone">组织者电话：{organizerPhone}</Text> : null}
+            </View>
 
-              <Button size="mini" onClick={() => setShowPublisher(false)}>关闭</Button>
+          </View>
+
+        )}
+
+
+
+        {showPhoneKey && (
+
+          <View className="activity-bike-index-modal">
+
+            <View className="activity-bike-index-modalBody">
+
+              <Text className="activity-bike-index-modalTitle">获取发布者号码</Text>
+
+              {!organizerPhone ? (
+
+                <>
+
+                  <Input className="form-input" placeholder="请输入口令" value={phoneKeyForm.key} onInput={(e) => setPhoneKeyForm({ key: e.detail.value })} />
+
+                  <View className="activity-bike-index-modalActions">
+
+                    <Button size="mini" onClick={() => setShowPhoneKey(false)}>取消</Button>
+
+                    <Button size="mini" type="primary" className="button-primary" onClick={onFetchPhone}>提交</Button>
+
+                  </View>
+
+                </>
+
+              ) : (
+
+                <>
+
+                  <View className="activity-bike-index-phoneResult">
+
+                    <Text className="activity-bike-index-phoneResultLabel">联系电话</Text>
+
+                    <Text className="activity-bike-index-phoneResultValue">{organizerPhone}</Text>
+
+                  </View>
+
+                  <View className="activity-bike-index-modalActions activity-bike-index-modalActionsDivider">
+
+                    <Button size="mini" onClick={() => setShowPhoneKey(false)}>关闭</Button>
+
+                  </View>
+
+                </>
+
+              )}
 
             </View>
 
@@ -641,7 +727,9 @@ export default function BikeActivityPage() {
 
               ))}
 
-              <Button size="mini" onClick={() => setShowJoinList(false)}>关闭</Button>
+              <View className="activity-bike-index-modalActions activity-bike-index-modalActionsDivider">
+                <Button size="mini" onClick={() => setShowJoinList(false)}>关闭</Button>
+              </View>
 
             </View>
 

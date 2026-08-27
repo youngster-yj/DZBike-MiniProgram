@@ -17,6 +17,7 @@ import { toAssetUrl } from '@/utils/assetUrl';
 import { getStoreByShop } from '@/services/platformConfig';
 import { formatDateTime, isTimestampFuture } from '@/utils/timeUtil';
 import { judgeName, judgePhone, showSuccess, showError } from '@/utils/helpers';
+import { getOrCreateDeviceId } from '@/utils/deviceId';
 import { ApiError } from '@/services/request';
 
 const TIMELINESS_VALUES: Array<'underway' | 'finished'> = ['underway', 'finished'];
@@ -118,6 +119,7 @@ export default function ShopActivityPage() {
         activityId: detail._id,
         name: joinForm.name,
         phone: joinForm.phone,
+        deviceId: getOrCreateDeviceId(),
       });
       if (res.ok) {
         showSuccess(res.reason || '报名成功');

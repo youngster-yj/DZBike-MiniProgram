@@ -4,6 +4,7 @@ import { getVisibleStoreAddressDetailSync } from '@/services/platformConfig';
 import { submitComplaint } from '@/services/api/complaint';
 import { StoreAddressCard } from '@/components/StoreAddressCard';
 import { judgeName, judgePhone, showSuccess, showError } from '@/utils/helpers';
+import { getOrCreateDeviceId } from '@/utils/deviceId';
 import { usePlatformConfigVersion } from '@/store/platformConfigStore';
 
 
@@ -42,6 +43,7 @@ export default function ComplaintPage() {
         name: form.name,
         phone: form.phone,
         content: form.content,
+        deviceId: getOrCreateDeviceId(),
       });
       if (res.ok) {
         showSuccess('投诉成功');

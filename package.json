@@ -11,9 +11,10 @@
   },
   "scripts": {
     "postinstall": "node scripts/patch-taro-components.js && node scripts/generate-action-icons.js && node scripts/generate-menu-icons.js && node scripts/generate-tabbar-icons.js --force",
-    "build:weapp": "cross-env NODE_ENV=development taro build --type weapp",
-    "build:weapp:prod": "cross-env NODE_ENV=production taro build --type weapp",
+    "build:weapp": "cross-env NODE_ENV=development taro build --type weapp && node scripts/sync-devtools-config.js",
+    "build:weapp:prod": "cross-env NODE_ENV=production taro build --type weapp && node scripts/sync-devtools-config.js",
     "dev:weapp": "cross-env NODE_ENV=development taro build --type weapp --watch",
+    "sync:devtools": "node scripts/sync-devtools-config.js",
     "build:h5": "taro build --type h5",
     "dev:h5": "npm run build:h5 -- --watch"
   },

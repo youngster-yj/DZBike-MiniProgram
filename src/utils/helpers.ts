@@ -9,7 +9,8 @@ export function showSuccess(title: string) {
 }
 
 export function showError(title: string) {
-  showToast(title, 'error');
+  // icon: 'error' 在微信小程序最多显示 7 个汉字，长文案会被截断
+  showToast(title, 'none');
 }
 
 /** 仅允许 2–10 位中文姓名/昵称 */

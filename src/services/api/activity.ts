@@ -42,7 +42,7 @@ export function joinActivity(data: {
   });
 }
 
-export function judgeActivityKey(data: { activityId: string; key: string; name: string; phone: string }) {
+export function judgeActivityKey(data: { activityId: string; key: string }) {
   return NetWorkApi<API.ActionSucceeded>({
     method: 'post',
     url: 'activity/judge/key',
@@ -50,7 +50,7 @@ export function judgeActivityKey(data: { activityId: string; key: string; name: 
   });
 }
 
-export function fetchOrganizerPhone(data: { activityId: string; key: string; name: string; phone: string }) {
+export function fetchOrganizerPhone(data: { activityId: string; key: string }) {
   return NetWorkApi<API.UserPhoneResponse>({
     method: 'post',
     url: 'activity/user/phone',
@@ -58,7 +58,7 @@ export function fetchOrganizerPhone(data: { activityId: string; key: string; nam
   });
 }
 
-export function fetchJoinList(data: { activityId: string; key: string; name: string; phone: string }) {
+export function fetchJoinList(data: { activityId: string; name: string; phone: string }) {
   return NetWorkApi<API.JoinDataResponse>({
     method: 'post',
     url: 'activity/join/list',
