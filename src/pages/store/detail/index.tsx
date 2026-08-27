@@ -6,7 +6,10 @@ import { API } from '@/services/types';
 import { toAssetUrl } from '@/utils/assetUrl';
 import { getBrandMapSync, getCategoryMapSync, getStoreByShop } from '@/services/platformConfig';
 import { StoreAddressCard } from '@/components/StoreAddressCard';
+import { SharePosterModal } from '@/components/SharePoster';
+import { ShareActionButton } from '@/components/ShareActionButton';
 import { previewImages } from '@/utils/helpers';
+import { buildProductH5Url, buildProductMiniPath } from '@/utils/shareUrl';
 
 
 export default function StoreDetailPage() {
@@ -14,6 +17,7 @@ export default function StoreDetailPage() {
   const id = router.params.id || '';
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<API.StoreDetailDataResponse | null>(null);
+  const [showSharePoster, setShowSharePoster] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -22,9 +26,12 @@ export default function StoreDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const shareImage = data?.imgUrl?.[0] ? toAssetUrl(data.imgUrl[0]) : undefined;
+
   useShareAppMessage(() => ({
     title: data?.name || '商品详情',
-    path: `/pages/store/detail/index?id=${id}`,
+    path: buildProductMiniPath(id),
+    imageUrl: shareImage,
   }));
 
   if (loading) return <View className="store-detail-index-loading">加载中...</View>;
@@ -37,7 +44,7 @@ export default function StoreDetailPage() {
   const detailContent = data.detailMD || data.detail || '';
 
   return (
-    <View className="store-detail-index-page">
+    <View className="store-detail-index-page store-detail-index-pageWithFooter">
       <View className="store-detail-index-carouselWrap">
         <Swiper className="store-detail-index-swiper" indicatorDots circular>
           {images.map((src) => (
@@ -58,7 +65,9 @@ export default function StoreDetailPage() {
           <Text className="store-detail-index-priceIcon">¥</Text>
           <Text className="store-detail-index-price">{data.price}</Text>
         </View>
-        <Text className="store-detail-index-name">{data.name}</Text>
+        <View className="store-detail-index-nameRow">
+          <Text className="store-detail-index-name">{data.name}</Text>
+        </View>
         <View className="store-detail-index-meta">
           <Text>{brandLabel}</Text>
           <Text>{typeLabel}</Text>
@@ -75,6 +84,28 @@ export default function StoreDetailPage() {
           <Text className="store-detail-index-detailTitle">商品信息</Text>
           <RichText className="store-detail-index-detailContent" nodes={detailContent.replace(/\n/g, '<br/>')} />
         </View>
+      )}
+
+      <View className="store-detail-index-detailFooter">
+        <ShareActionButton
+          fullWidth
+          label="分享好物"
+          onClick={() => setShowSharePoster(true)}
+        />
+      </View>
+
+      {showSharePoster && (
+        <SharePosterModal
+          payload={{
+            kind: 'product',
+            data: {
+              title: data.name,
+              imageUrl: shareImage || '',
+              h5Url: buildProductH5Url(data.brand, data._id),
+            },
+          }}
+          onClose={() => setShowSharePoster(false)}
+        />
       )}
     </View>
   );

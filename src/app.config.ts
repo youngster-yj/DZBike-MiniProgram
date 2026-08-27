@@ -54,6 +54,9 @@ export default defineAppConfig({
     'scope.userLocation': {
       desc: '\u7528\u4e8e\u5c55\u793a\u95e8\u5e97\u4f4d\u7f6e\u5e76\u63d0\u4f9b\u5bfc\u822a\u670d\u52a1',
     },
+    'scope.writePhotosAlbum': {
+      desc: '\u7528\u4e8e\u4fdd\u5b58\u5206\u4eab\u6d77\u62a5\u5230\u76f8\u518c',
+    },
   },
   requiredPrivateInfos: ['getLocation', 'chooseLocation'],
 });

@@ -15,6 +15,9 @@ import { ImagesGridBox } from '@/components/ImagesGridBox';
 import { toAssetUrl } from '@/utils/assetUrl';
 import { getStoreByShop } from '@/services/platformConfig';
 import { formatDate } from '@/utils/timeUtil';
+import { SharePosterModal } from '@/components/SharePoster';
+import { ShareActionButton } from '@/components/ShareActionButton';
+import { buildCollectH5Url, buildCollectMiniPath } from '@/utils/shareUrl';
 
 
 export default function CollectPage() {
@@ -26,6 +29,7 @@ export default function CollectPage() {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<API.CollectListItemResponse | null>(null);
+  const [showSharePoster, setShowSharePoster] = useState(false);
   const [gridSize, setGridSize] = useState(686);
 
   useEffect(() => {
@@ -78,9 +82,8 @@ export default function CollectPage() {
 
   useShareAppMessage(() => ({
     title: detail?.title || '精彩日常',
-    path: collectId
-      ? `/pages/activity/collect/index?collect_id=${collectId}`
-      : '/pages/activity/collect/index',
+    path: buildCollectMiniPath(collectId),
+    imageUrl: detail?.imgUrl?.[0] ? toAssetUrl(detail.imgUrl[0]) : undefined,
   }));
 
   if (collectId && detail) {
@@ -93,7 +96,9 @@ export default function CollectPage() {
           <ImagesGridBox size={gridSize} images={images} />
         </View>
         <View className="activity-collect-index-detailCard">
-          <Text className="activity-collect-index-title">{detail.title}</Text>
+          <View className="activity-collect-index-titleRow">
+            <Text className="activity-collect-index-title">{detail.title}</Text>
+          </View>
           <Text className="activity-collect-index-time">{formatDate(detail.time)}</Text>
           {detail.detail && <Text className="activity-collect-index-content">{detail.detail}</Text>}
           {detail.detailMD && <Text className="activity-collect-index-content">{detail.detailMD}</Text>}
@@ -102,6 +107,26 @@ export default function CollectPage() {
           <View className="activity-collect-index-storeWrap">
             <StoreAddressCard info={storeInfo} />
           </View>
+        )}
+
+        <View className="activity-collect-index-detailFooter">
+          <ShareActionButton fullWidth onClick={() => setShowSharePoster(true)} />
+        </View>
+
+        {showSharePoster && (
+          <SharePosterModal
+            payload={{
+              kind: 'collect',
+              data: {
+                title: detail.title,
+                detail: detail.detail || detail.detailMD,
+                shootTimeText: formatDate(detail.time),
+                imageUrl: images[0] || '',
+                h5Url: buildCollectH5Url(detail._id),
+              },
+            }}
+            onClose={() => setShowSharePoster(false)}
+          />
         )}
       </View>
     );

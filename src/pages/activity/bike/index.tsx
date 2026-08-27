@@ -5,7 +5,7 @@ import Taro, {
   useReachBottom,
   useShareAppMessage,
 } from '@tarojs/taro';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchActivityList,
   fetchActivityDetail,
@@ -27,6 +27,10 @@ import { requestActivityAuditSubscribe } from '@/utils/wxSubscribe';
 import officialBg from '@/assets/activity/official.png';
 import personalBg from '@/assets/activity/personal.png';
 import { Phone } from '@nutui/icons-react-taro';
+import { ShareKeyGate } from '@/components/ShareKeyGate';
+import { SharePosterModal } from '@/components/SharePoster';
+import { ShareActionButton } from '@/components/ShareActionButton';
+import { buildBikeH5Url, buildBikeMiniPath } from '@/utils/shareUrl';
 
 const TIMELINESS_VALUES: Array<'underway' | 'finished'> = ['underway', 'finished'];
 
@@ -93,6 +97,15 @@ export default function BikeActivityPage() {
   const [phoneKeyForm, setPhoneKeyForm] = useState({ key: '' });
 
   const [organizerPhone, setOrganizerPhone] = useState('');
+
+  const [showShareKey, setShowShareKey] = useState(false);
+  const [showSharePoster, setShowSharePoster] = useState(false);
+  const [shareKey, setShareKey] = useState('');
+  const shareKeyRef = useRef('');
+
+  const activityKeyFromQuery = router.params.activity_key
+    ? decodeURIComponent(router.params.activity_key)
+    : '';
 
 
 
@@ -178,6 +191,14 @@ export default function BikeActivityPage() {
 
   }, [activityId, timelinessIndex]);
 
+  useEffect(() => {
+    if (activityKeyFromQuery) {
+      setJoinForm((prev) => ({ ...prev, key: activityKeyFromQuery }));
+      setShareKey(activityKeyFromQuery);
+      shareKeyRef.current = activityKeyFromQuery;
+    }
+  }, [activityKeyFromQuery]);
+
 
 
   usePullDownRefresh(() => {
@@ -199,15 +220,11 @@ export default function BikeActivityPage() {
 
 
   useShareAppMessage(() => ({
-
     title: detail?.title || '骑行活动',
-
     path: activityId
-
-      ? `/pages/activity/bike/index?activity_id=${activityId}`
-
+      ? buildBikeMiniPath(activityId, shareKeyRef.current || activityKeyFromQuery)
       : '/pages/activity/bike/index',
-
+    imageUrl: detail?.source === 'personal' ? personalBg : officialBg,
   }));
 
 
@@ -399,6 +416,22 @@ export default function BikeActivityPage() {
 
   };
 
+  const openSharePoster = (key: string) => {
+    shareKeyRef.current = key;
+    setShareKey(key);
+    setShowShareKey(false);
+    setShowSharePoster(true);
+  };
+
+  const onShareActivity = () => {
+    const existingKey = shareKeyRef.current || activityKeyFromQuery;
+    if (existingKey) {
+      openSharePoster(existingKey);
+      return;
+    }
+    setShowShareKey(true);
+  };
+
 
 
   if (activityId && detail) {
@@ -585,19 +618,22 @@ export default function BikeActivityPage() {
 
 
 
-        {allowJoin && (
-
-          <View className="activity-bike-index-detailFooter">
-
-            <Button className="activity-bike-index-joinBtn button-primary" type="primary" onClick={() => setShowJoin(true)}>
-
+        <View className="activity-bike-index-detailFooter">
+          <ShareActionButton
+            label="分享活动"
+            onClick={onShareActivity}
+          />
+          {allowJoin && (
+            <Button
+              className="activity-bike-index-joinBtn button-primary footer-action-btn"
+              type="primary"
+              hoverClass="none"
+              onClick={() => setShowJoin(true)}
+            >
               参加活动
-
             </Button>
-
-          </View>
-
-        )}
+          )}
+        </View>
 
 
 
@@ -712,6 +748,31 @@ export default function BikeActivityPage() {
         )}
 
 
+
+        {showShareKey && (
+          <ShareKeyGate
+            activityId={detail._id}
+            onPass={openSharePoster}
+            onClose={() => setShowShareKey(false)}
+          />
+        )}
+
+        {showSharePoster && shareKey && (
+          <SharePosterModal
+            payload={{
+              kind: 'activity',
+              data: {
+                title: detail.title,
+                activityKey: shareKey,
+                publisherName: detail.name,
+                startTimeText: formatDateTime(detail.time),
+                bannerSrc: heroBg,
+                h5Url: buildBikeH5Url(detail._id, shareKey),
+              },
+            }}
+            onClose={() => setShowSharePoster(false)}
+          />
+        )}
 
         {showJoinList && (
 

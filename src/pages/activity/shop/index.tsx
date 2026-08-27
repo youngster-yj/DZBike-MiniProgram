@@ -1,5 +1,4 @@
-import { View, Text, Input, Button } from '@tarojs/components';
-import Taro, {
+import { View, Text, Input, Button } from '@tarojs/components';import Taro, {
   useRouter,
   usePullDownRefresh,
   useReachBottom,
@@ -19,7 +18,9 @@ import { formatDateTime, isTimestampFuture } from '@/utils/timeUtil';
 import { judgeName, judgePhone, showSuccess, showError } from '@/utils/helpers';
 import { getOrCreateDeviceId } from '@/utils/deviceId';
 import { ApiError } from '@/services/request';
-
+import { SharePosterModal } from '@/components/SharePoster';
+import { ShareActionButton } from '@/components/ShareActionButton';
+import { buildShopH5Url, buildShopMiniPath } from '@/utils/shareUrl';
 const TIMELINESS_VALUES: Array<'underway' | 'finished'> = ['underway', 'finished'];
 
 function showApiError(e: unknown, fallback: string) {
@@ -38,8 +39,8 @@ export default function ShopActivityPage() {
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<API.ShopDetailItemResponse | null>(null);
   const [showJoin, setShowJoin] = useState(false);
-  const [joinForm, setJoinForm] = useState({ name: '', phone: '' });
-  const [gridSize, setGridSize] = useState(686);
+  const [showSharePoster, setShowSharePoster] = useState(false);
+  const [joinForm, setJoinForm] = useState({ name: '', phone: '' });  const [gridSize, setGridSize] = useState(686);
 
   useEffect(() => {
     Taro.getSystemInfo({
@@ -95,11 +96,9 @@ export default function ShopActivityPage() {
 
   useShareAppMessage(() => ({
     title: detail?.title || '店铺活动',
-    path: shopId
-      ? `/pages/activity/shop/index?shop_id=${shopId}`
-      : '/pages/activity/shop/index',
+    path: buildShopMiniPath(shopId),
+    imageUrl: detail?.imgUrl?.[0] ? toAssetUrl(detail.imgUrl[0]) : undefined,
   }));
-
   const quota = useMemo(() => {
     if (!detail) return null;
     const limit = Number(detail.limit);
@@ -144,7 +143,9 @@ export default function ShopActivityPage() {
 
         <View className="activity-shop-index-main">
           <View className="activity-shop-index-headerCard">
-            <Text className="activity-shop-index-detailTitle">{detail.title}</Text>
+            <View className="activity-shop-index-titleRow">
+              <Text className="activity-shop-index-detailTitle">{detail.title}</Text>
+            </View>
             {detail.detail ? (
               <Text className="activity-shop-index-detailText">{detail.detail}</Text>
             ) : null}
@@ -196,16 +197,32 @@ export default function ShopActivityPage() {
           )}
         </View>
 
-        {active && (
-          <View className="activity-shop-index-detailFooter">
-            <Button className="activity-shop-index-joinBtn button-primary" type="primary" onClick={() => setShowJoin(true)}>
+        <View className="activity-shop-index-detailFooter">
+          <ShareActionButton onClick={() => setShowSharePoster(true)} />
+          {active && (
+            <Button className="activity-shop-index-joinBtn button-primary footer-action-btn" type="primary" hoverClass="none" onClick={() => setShowJoin(true)}>
               参与活动
             </Button>
-          </View>
+          )}
+        </View>
+
+        {showSharePoster && (
+          <SharePosterModal
+            payload={{
+              kind: 'shop',
+              data: {
+                title: detail.title,
+                detail: detail.detail || detail.detailMD,
+                endTimeText: formatDateTime(detail.time),
+                imageUrl: images[0] || '',
+                h5Url: buildShopH5Url(detail._id),
+              },
+            }}
+            onClose={() => setShowSharePoster(false)}
+          />
         )}
 
-        {showJoin && (
-          <View className="activity-shop-index-modal">
+        {showJoin && (          <View className="activity-shop-index-modal">
             <View className="activity-shop-index-modalBody">
               <Text className="activity-shop-index-modalTitle">参与活动</Text>
               <Input className="form-input" placeholder="姓名或昵称" value={joinForm.name} onInput={(e) => setJoinForm({ ...joinForm, name: e.detail.value })} />

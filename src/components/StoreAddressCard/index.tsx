@@ -41,17 +41,17 @@ export function StoreAddressCard({ info }: StoreAddressCardProps) {
           <Text className="StoreAddressCard-StoreAddressCard-address">{info.address}</Text>
         </View>
         <View className="StoreAddressCard-StoreAddressCard-actions">
-          <View className="StoreAddressCard-StoreAddressCard-actionBtn StoreAddressCard-StoreAddressCard-actionBtnPhone" onClick={onCall}>
-            <Phone className="StoreAddressCard-StoreAddressCard-actionIcon" style={{ color: '#3182ce' }} size={15} />
-          </View>
-          <View className="StoreAddressCard-StoreAddressCard-actionBtn StoreAddressCard-StoreAddressCard-actionBtnWechat" onClick={onWechat}>
-            <Message className="StoreAddressCard-StoreAddressCard-actionIcon" style={{ color: '#07C160' }} size={15} />
-          </View>
           {info.location && (
             <View className="StoreAddressCard-StoreAddressCard-actionBtn StoreAddressCard-StoreAddressCard-actionBtnNav" onClick={onNavigate}>
               <Location className="StoreAddressCard-StoreAddressCard-actionIcon" style={{ color: '#0EA5E9' }} size={15} />
             </View>
           )}
+          <View className="StoreAddressCard-StoreAddressCard-actionBtn StoreAddressCard-StoreAddressCard-actionBtnWechat" onClick={onWechat}>
+            <Message className="StoreAddressCard-StoreAddressCard-actionIcon" style={{ color: '#07C160' }} size={15} />
+          </View>
+          <View className="StoreAddressCard-StoreAddressCard-actionBtn StoreAddressCard-StoreAddressCard-actionBtnPhone" onClick={onCall}>
+            <Phone className="StoreAddressCard-StoreAddressCard-actionIcon" style={{ color: '#3182ce' }} size={15} />
+          </View>
         </View>
       </View>
     </View>
