@@ -4,7 +4,7 @@ import { View, Text, Input, Button } from '@tarojs/components';import Taro, {
   useReachBottom,
   useShareAppMessage,
 } from '@tarojs/taro';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchShopList, fetchShopDetail, joinShopActivity } from '@/services/api/shop';
 import { API } from '@/services/types';
 import { ShopItem } from '@/components/ShopItem';
@@ -21,6 +21,8 @@ import { ApiError } from '@/services/request';
 import { SharePosterModal } from '@/components/SharePoster';
 import { ShareActionButton } from '@/components/ShareActionButton';
 import { buildShopH5Url, buildShopMiniPath } from '@/utils/shareUrl';
+import { ensureShareCardImage, getShareCardImage } from '@/utils/shareCardImage';
+import { AnimatedModal } from '@/components/AnimatedModal';
 const TIMELINESS_VALUES: Array<'underway' | 'finished'> = ['underway', 'finished'];
 
 function showApiError(e: unknown, fallback: string) {
@@ -41,6 +43,7 @@ export default function ShopActivityPage() {
   const [showJoin, setShowJoin] = useState(false);
   const [showSharePoster, setShowSharePoster] = useState(false);
   const [joinForm, setJoinForm] = useState({ name: '', phone: '' });  const [gridSize, setGridSize] = useState(686);
+  const shareCardPathRef = useRef('');
 
   useEffect(() => {
     Taro.getSystemInfo({
@@ -85,6 +88,19 @@ export default function ShopActivityPage() {
     else { setPage(1); setList([]); loadList(true); }
   }, [shopId, timelinessIndex]);
 
+  useEffect(() => {
+    shareCardPathRef.current = '';
+    const cover = detail?.imgUrl?.[0] ? toAssetUrl(detail.imgUrl[0]) : '';
+    if (!cover) return;
+    let cancelled = false;
+    ensureShareCardImage(cover).then((path) => {
+      if (!cancelled && path) shareCardPathRef.current = path;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [detail]);
+
   usePullDownRefresh(() => {
     if (shopId) loadDetail(shopId);
     else { setPage(1); setList([]); loadList(true); }
@@ -94,11 +110,27 @@ export default function ShopActivityPage() {
     if (!shopId && hasMore && !loading) loadList(false);
   });
 
-  useShareAppMessage(() => ({
-    title: detail?.title || '店铺活动',
-    path: buildShopMiniPath(shopId),
-    imageUrl: detail?.imgUrl?.[0] ? toAssetUrl(detail.imgUrl[0]) : undefined,
-  }));
+  useShareAppMessage(() => {
+    const title = detail?.title || '店铺活动';
+    const path = buildShopMiniPath(shopId);
+    const coverSrc = detail?.imgUrl?.[0] ? toAssetUrl(detail.imgUrl[0]) : undefined;
+    const ready = shareCardPathRef.current || getShareCardImage(coverSrc);
+    if (ready) {
+      return { title, path, imageUrl: ready };
+    }
+    if (!coverSrc) {
+      return { title, path };
+    }
+    return {
+      title,
+      path,
+      promise: ensureShareCardImage(coverSrc).then((thumb) => {
+        if (thumb) shareCardPathRef.current = thumb;
+        // Menu-share last resort only
+        return { title, path, imageUrl: thumb || coverSrc };
+      }),
+    };
+  });
   const quota = useMemo(() => {
     if (!detail) return null;
     const limit = Number(detail.limit);
@@ -206,34 +238,38 @@ export default function ShopActivityPage() {
           )}
         </View>
 
-        {showSharePoster && (
-          <SharePosterModal
-            payload={{
-              kind: 'shop',
-              data: {
-                title: detail.title,
-                detail: detail.detail || detail.detailMD,
-                endTimeText: formatDateTime(detail.time),
-                imageUrl: images[0] || '',
-                h5Url: buildShopH5Url(detail._id),
-              },
-            }}
-            onClose={() => setShowSharePoster(false)}
-          />
-        )}
+        <SharePosterModal
+          visible={showSharePoster}
+          payload={{
+            kind: 'shop',
+            data: {
+              title: detail.title,
+              detail: detail.detail || detail.detailMD,
+              endTimeText: formatDateTime(detail.time),
+              imageUrl: images[0] || '',
+              h5Url: buildShopH5Url(detail._id),
+            },
+          }}
+          onClose={() => setShowSharePoster(false)}
+          onShareImageReady={(tempPath) => {
+            shareCardPathRef.current = tempPath;
+          }}
+        />
 
-        {showJoin && (          <View className="activity-shop-index-modal">
-            <View className="activity-shop-index-modalBody">
-              <Text className="activity-shop-index-modalTitle">参与活动</Text>
-              <Input className="form-input" placeholder="姓名或昵称" value={joinForm.name} onInput={(e) => setJoinForm({ ...joinForm, name: e.detail.value })} />
-              <Input className="form-input" placeholder="手机号" type="number" value={joinForm.phone} onInput={(e) => setJoinForm({ ...joinForm, phone: e.detail.value })} />
-              <View className="activity-shop-index-modalActions">
-                <Button size="mini" onClick={() => setShowJoin(false)}>取消</Button>
-                <Button size="mini" type="primary" className="button-primary" onClick={onJoin}>提交</Button>
-              </View>
-            </View>
+        <AnimatedModal
+          visible={showJoin}
+          onClose={() => setShowJoin(false)}
+          maskClassName="activity-shop-index-modal"
+          bodyClassName="activity-shop-index-modalBody"
+        >
+          <Text className="activity-shop-index-modalTitle">参与活动</Text>
+          <Input className="form-input" placeholder="姓名或昵称" value={joinForm.name} onInput={(e) => setJoinForm({ ...joinForm, name: e.detail.value })} />
+          <Input className="form-input" placeholder="手机号" type="number" value={joinForm.phone} onInput={(e) => setJoinForm({ ...joinForm, phone: e.detail.value })} />
+          <View className="activity-shop-index-modalActions">
+            <Button size="mini" onClick={() => setShowJoin(false)}>取消</Button>
+            <Button size="mini" type="primary" className="button-primary" onClick={onJoin}>提交</Button>
           </View>
-        )}
+        </AnimatedModal>
       </View>
     );
   }
@@ -243,8 +279,8 @@ export default function ShopActivityPage() {
       <TimelinessToolbar value={timelinessIndex} onChange={setTimelinessIndex} />
 
       <View className="activity-shop-index-list">
-        {list.map((item) => (
-          <ShopItem key={item._id} data={item} />
+        {list.map((item, index) => (
+          <ShopItem key={item._id} data={item} index={index} />
         ))}
       </View>
 

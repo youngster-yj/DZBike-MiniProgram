@@ -8,22 +8,28 @@ import { ImagesGridBox } from '@/components/ImagesGridBox';
 
 interface ShopItemProps {
   data: API.ShopListItemResponse;
+  index?: number;
 }
 
-export function ShopItem({ data }: ShopItemProps) {
+export function ShopItem({ data, index = 0 }: ShopItemProps) {
   const images = (data.imgUrl || []).map((item) => toAssetUrl(item));
   const shopName = getShopDisplayNameSync(data.shop);
   const ended = isAfter(data.time);
   const limit = Number(data.limit);
   const joinCount = Number(data.joinCount);
   const quota = Number.isFinite(limit) && Number.isFinite(joinCount) ? limit - joinCount : null;
+  const delay = Math.min(index, 7) * 40;
 
   const onDetail = () => {
     Taro.navigateTo({ url: `/pages/activity/shop/index?shop_id=${data._id}` });
   };
 
   return (
-    <View className="ShopItem-ShopItem-item" onClick={onDetail}>
+    <View
+      className="ShopItem-ShopItem-item dz-list-enter"
+      style={{ animationDelay: `${delay}ms` }}
+      onClick={onDetail}
+    >
       <View className="ShopItem-ShopItem-cover">
         <ImagesGridBox size={112} images={images} />
       </View>

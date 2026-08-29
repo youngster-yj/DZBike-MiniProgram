@@ -141,8 +141,8 @@ export default function StoreListPage() {
       )}
 
       <View className="store-list-index-list">
-        {dataSource.map((item) => (
-          <StoreItem key={item._id} data={item} />
+        {dataSource.map((item, index) => (
+          <StoreItem key={item._id} data={item} index={index} />
         ))}
       </View>
 

@@ -3,14 +3,16 @@ import { useState } from 'react';
 import { judgeActivityKey } from '@/services/api/activity';
 import { showError } from '@/utils/helpers';
 import { ApiError } from '@/services/request';
+import { AnimatedModal } from '@/components/AnimatedModal';
 
 interface ShareKeyGateProps {
+  visible: boolean;
   activityId: string;
   onPass: (key: string) => void;
   onClose: () => void;
 }
 
-export function ShareKeyGate({ activityId, onPass, onClose }: ShareKeyGateProps) {
+export function ShareKeyGate({ visible, activityId, onPass, onClose }: ShareKeyGateProps) {
   const [key, setKey] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -33,29 +35,32 @@ export function ShareKeyGate({ activityId, onPass, onClose }: ShareKeyGateProps)
   };
 
   return (
-    <View className="share-key-gate-modal">
-      <View className="share-key-gate-body">
-        <Text className="share-key-gate-title">*口令</Text>
-        <Input
-          className="form-input"
-          placeholder="请输入入口令"
-          value={key}
-          onInput={(e) => setKey(e.detail.value)}
-        />
-        <Text className="share-key-gate-desc">用于校验参与者身份</Text>
-        <View className="share-key-gate-actions">
-          <Button size="mini" onClick={onClose}>取消</Button>
-          <Button
-            size="mini"
-            type="primary"
-            className="button-primary"
-            loading={loading}
-            onClick={onSubmit}
-          >
-            提交
-          </Button>
-        </View>
+    <AnimatedModal
+      visible={visible}
+      onClose={onClose}
+      maskClassName="share-key-gate-modal"
+      bodyClassName="share-key-gate-body"
+    >
+      <Text className="share-key-gate-title">*口令</Text>
+      <Input
+        className="form-input"
+        placeholder="请输入入口令"
+        value={key}
+        onInput={(e) => setKey(e.detail.value)}
+      />
+      <Text className="share-key-gate-desc">用于校验参与者身份</Text>
+      <View className="share-key-gate-actions">
+        <Button size="mini" onClick={onClose}>取消</Button>
+        <Button
+          size="mini"
+          type="primary"
+          className="button-primary"
+          loading={loading}
+          onClick={onSubmit}
+        >
+          提交
+        </Button>
       </View>
-    </View>
+    </AnimatedModal>
   );
 }

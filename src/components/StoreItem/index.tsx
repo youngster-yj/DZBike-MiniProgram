@@ -1,5 +1,6 @@
 import { View, Image, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
+import { useState } from 'react';
 import { Phone } from '@nutui/icons-react-taro';
 import { API } from '@/services/types';
 import { toAssetUrl } from '@/utils/assetUrl';
@@ -7,6 +8,7 @@ import { makePhoneCall } from '@/utils/helpers';
 
 interface StoreItemProps {
   data: API.StoreListItemResponse;
+  index?: number;
 }
 
 function getShopPhone(shop?: string): string {
@@ -14,8 +16,10 @@ function getShopPhone(shop?: string): string {
   return '15508186565';
 }
 
-export function StoreItem({ data }: StoreItemProps) {
+export function StoreItem({ data, index = 0 }: StoreItemProps) {
   const cover = data.imgUrl?.[0] ? toAssetUrl(data.imgUrl[0]) : toAssetUrl('assets/nopic.jpg');
+  const [imgReady, setImgReady] = useState(false);
+  const delay = Math.min(index, 7) * 40;
 
   const onDetail = () => {
     Taro.navigateTo({ url: `/pages/store/detail/index?id=${data._id}` });
@@ -27,9 +31,19 @@ export function StoreItem({ data }: StoreItemProps) {
   };
 
   return (
-    <View className="StoreItem-StoreItem-item" onClick={onDetail}>
+    <View
+      className="StoreItem-StoreItem-item dz-list-enter"
+      style={{ animationDelay: `${delay}ms` }}
+      onClick={onDetail}
+    >
       <View className="StoreItem-StoreItem-imgBox">
-        <Image className="StoreItem-StoreItem-cover" src={cover} mode="aspectFit" lazyLoad />
+        <Image
+          className={`StoreItem-StoreItem-cover dz-img-fade${imgReady ? ' dz-img-fade--in' : ''}`}
+          src={cover}
+          mode="aspectFit"
+          lazyLoad
+          onLoad={() => setImgReady(true)}
+        />
       </View>
       <View className="StoreItem-StoreItem-footer">
         <Text className="StoreItem-StoreItem-name">{data.name}</Text>

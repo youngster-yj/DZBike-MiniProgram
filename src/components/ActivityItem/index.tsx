@@ -1,5 +1,6 @@
 import { View, Text, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
+import { useState } from 'react';
 import { API } from '@/services/types';
 import { formatDateTime } from '@/utils/timeUtil';
 import officialBg from '@/assets/activity/official.png';
@@ -7,19 +8,31 @@ import personalBg from '@/assets/activity/personal.png';
 
 interface ActivityItemProps {
   data: API.ActivityListItemResponse;
+  index?: number;
 }
 
-export function ActivityItem({ data }: ActivityItemProps) {
+export function ActivityItem({ data, index = 0 }: ActivityItemProps) {
   const isPersonal = data.source === 'personal';
   const bg = isPersonal ? personalBg : officialBg;
+  const [imgReady, setImgReady] = useState(false);
+  const delay = Math.min(index, 7) * 40;
 
   const onDetail = () => {
     Taro.navigateTo({ url: `/pages/activity/bike/index?activity_id=${data._id}` });
   };
 
   return (
-    <View className="ActivityItem-ActivityItem-card" onClick={onDetail}>
-      <Image className="ActivityItem-ActivityItem-bg" src={bg} mode="aspectFill" />
+    <View
+      className="ActivityItem-ActivityItem-card dz-list-enter"
+      style={{ animationDelay: `${delay}ms` }}
+      onClick={onDetail}
+    >
+      <Image
+        className={`ActivityItem-ActivityItem-bg dz-img-fade${imgReady ? ' dz-img-fade--in' : ''}`}
+        src={bg}
+        mode="aspectFill"
+        onLoad={() => setImgReady(true)}
+      />
       <View className="ActivityItem-ActivityItem-overlay" />
       <View className="ActivityItem-ActivityItem-main">
         <View className="ActivityItem-ActivityItem-header">

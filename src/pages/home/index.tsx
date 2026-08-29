@@ -133,8 +133,8 @@ export default function HomePage() {
         <>
           <View className="section-title">骑行活动</View>
           <View className="home-index-sectionBody">
-            {activities.map((item) => (
-              <ActivityItem key={item._id} data={item} />
+            {activities.map((item, index) => (
+              <ActivityItem key={item._id} data={item} index={index} />
             ))}
           </View>
         </>
@@ -144,8 +144,8 @@ export default function HomePage() {
         <>
           <View className="section-title">店铺活动</View>
           <View className="home-index-sectionBody">
-            {shops.map((item) => (
-              <ShopItem key={item._id} data={item} />
+            {shops.map((item, index) => (
+              <ShopItem key={item._id} data={item} index={index} />
             ))}
           </View>
         </>

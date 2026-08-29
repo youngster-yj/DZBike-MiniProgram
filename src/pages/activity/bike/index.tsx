@@ -30,7 +30,9 @@ import { Phone } from '@nutui/icons-react-taro';
 import { ShareKeyGate } from '@/components/ShareKeyGate';
 import { SharePosterModal } from '@/components/SharePoster';
 import { ShareActionButton } from '@/components/ShareActionButton';
+import { AnimatedModal } from '@/components/AnimatedModal';
 import { buildBikeH5Url, buildBikeMiniPath } from '@/utils/shareUrl';
+import { ensureShareCardImage, getShareCardImage } from '@/utils/shareCardImage';
 
 const TIMELINESS_VALUES: Array<'underway' | 'finished'> = ['underway', 'finished'];
 
@@ -102,6 +104,7 @@ export default function BikeActivityPage() {
   const [showSharePoster, setShowSharePoster] = useState(false);
   const [shareKey, setShareKey] = useState('');
   const shareKeyRef = useRef('');
+  const shareCardPathRef = useRef('');
 
   const activityKeyFromQuery = router.params.activity_key
     ? decodeURIComponent(router.params.activity_key)
@@ -219,13 +222,39 @@ export default function BikeActivityPage() {
 
 
 
-  useShareAppMessage(() => ({
-    title: detail?.title || '骑行活动',
-    path: activityId
+  useEffect(() => {
+    shareCardPathRef.current = '';
+    if (!detail) return;
+    const cover = detail.source === 'personal' ? personalBg : officialBg;
+    let cancelled = false;
+    ensureShareCardImage(cover).then((path) => {
+      if (!cancelled && path) shareCardPathRef.current = path;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [detail]);
+
+  useShareAppMessage(() => {
+    const title = detail?.title || '骑行活动';
+    const path = activityId
       ? buildBikeMiniPath(activityId, shareKeyRef.current || activityKeyFromQuery)
-      : '/pages/activity/bike/index',
-    imageUrl: detail?.source === 'personal' ? personalBg : officialBg,
-  }));
+      : '/pages/activity/bike/index';
+    const coverSrc = detail?.source === 'personal' ? personalBg : officialBg;
+    const ready = shareCardPathRef.current || getShareCardImage(coverSrc);
+    if (ready) {
+      return { title, path, imageUrl: ready };
+    }
+    return {
+      title,
+      path,
+      promise: ensureShareCardImage(coverSrc).then((thumb) => {
+        if (thumb) shareCardPathRef.current = thumb;
+        // Menu-share last resort only: packaged asset if thumb failed
+        return { title, path, imageUrl: thumb || coverSrc };
+      }),
+    };
+  });
 
 
 
@@ -637,166 +666,107 @@ export default function BikeActivityPage() {
 
 
 
-        {showJoin && (
+        <AnimatedModal
+          visible={showJoin}
+          onClose={() => setShowJoin(false)}
+          maskClassName="activity-bike-index-modal"
+          bodyClassName="activity-bike-index-modalBody"
+        >
+          <Text className="activity-bike-index-modalTitle">参加活动</Text>
+          <Input className="form-input" placeholder="姓名或昵称" value={joinForm.name} onInput={(e) => setJoinForm({ ...joinForm, name: e.detail.value })} />
+          <Input className="form-input" placeholder="手机号" type="number" value={joinForm.phone} onInput={(e) => setJoinForm({ ...joinForm, phone: e.detail.value })} />
+          <Input className="form-input" placeholder="活动口令" value={joinForm.key} onInput={(e) => setJoinForm({ ...joinForm, key: e.detail.value })} />
+          <View className="activity-bike-index-modalActions">
+            <Button size="mini" onClick={() => setShowJoin(false)}>取消</Button>
+            <Button size="mini" type="primary" className="button-primary" onClick={onJoin}>提交</Button>
+          </View>
+        </AnimatedModal>
 
-          <View className="activity-bike-index-modal">
 
-            <View className="activity-bike-index-modalBody">
 
-              <Text className="activity-bike-index-modalTitle">参加活动</Text>
+        <AnimatedModal
+          visible={showJoinListVerify}
+          onClose={() => setShowJoinListVerify(false)}
+          maskClassName="activity-bike-index-modal"
+          bodyClassName="activity-bike-index-modalBody"
+        >
+          <Text className="activity-bike-index-modalTitle">获取参与人员信息</Text>
+          <Input className="form-input" placeholder="请输入姓名或昵称" value={joinListForm.name} onInput={(e) => setJoinListForm({ ...joinListForm, name: e.detail.value })} />
+          <Input className="form-input" placeholder="请输入电话号" type="number" value={joinListForm.phone} onInput={(e) => setJoinListForm({ ...joinListForm, phone: e.detail.value })} />
+          <View className="activity-bike-index-modalActions">
+            <Button size="mini" onClick={() => setShowJoinListVerify(false)}>取消</Button>
+            <Button size="mini" type="primary" className="button-primary" onClick={onFetchJoinList}>提交</Button>
+          </View>
+        </AnimatedModal>
 
-              <Input className="form-input" placeholder="姓名或昵称" value={joinForm.name} onInput={(e) => setJoinForm({ ...joinForm, name: e.detail.value })} />
-
-              <Input className="form-input" placeholder="手机号" type="number" value={joinForm.phone} onInput={(e) => setJoinForm({ ...joinForm, phone: e.detail.value })} />
-
-              <Input className="form-input" placeholder="活动口令" value={joinForm.key} onInput={(e) => setJoinForm({ ...joinForm, key: e.detail.value })} />
-
+        <AnimatedModal
+          visible={showPhoneKey}
+          onClose={() => setShowPhoneKey(false)}
+          maskClassName="activity-bike-index-modal"
+          bodyClassName="activity-bike-index-modalBody"
+        >
+          <Text className="activity-bike-index-modalTitle">获取发布者号码</Text>
+          {!organizerPhone ? (
+            <>
+              <Input className="form-input" placeholder="请输入口令" value={phoneKeyForm.key} onInput={(e) => setPhoneKeyForm({ key: e.detail.value })} />
               <View className="activity-bike-index-modalActions">
-
-                <Button size="mini" onClick={() => setShowJoin(false)}>取消</Button>
-
-                <Button size="mini" type="primary" className="button-primary" onClick={onJoin}>提交</Button>
-
+                <Button size="mini" onClick={() => setShowPhoneKey(false)}>取消</Button>
+                <Button size="mini" type="primary" className="button-primary" onClick={onFetchPhone}>提交</Button>
               </View>
-
-            </View>
-
-          </View>
-
-        )}
-
-
-
-        {showJoinListVerify && (
-
-          <View className="activity-bike-index-modal">
-
-            <View className="activity-bike-index-modalBody">
-
-              <Text className="activity-bike-index-modalTitle">获取参与人员信息</Text>
-
-              <Input className="form-input" placeholder="请输入姓名或昵称" value={joinListForm.name} onInput={(e) => setJoinListForm({ ...joinListForm, name: e.detail.value })} />
-
-              <Input className="form-input" placeholder="请输入电话号" type="number" value={joinListForm.phone} onInput={(e) => setJoinListForm({ ...joinListForm, phone: e.detail.value })} />
-
-              <View className="activity-bike-index-modalActions">
-
-                <Button size="mini" onClick={() => setShowJoinListVerify(false)}>取消</Button>
-
-                <Button size="mini" type="primary" className="button-primary" onClick={onFetchJoinList}>提交</Button>
-
+            </>
+          ) : (
+            <>
+              <View className="activity-bike-index-phoneResult">
+                <Text className="activity-bike-index-phoneResultLabel">联系电话</Text>
+                <Text className="activity-bike-index-phoneResultValue">{organizerPhone}</Text>
               </View>
-
-            </View>
-
-          </View>
-
-        )}
-
-
-
-        {showPhoneKey && (
-
-          <View className="activity-bike-index-modal">
-
-            <View className="activity-bike-index-modalBody">
-
-              <Text className="activity-bike-index-modalTitle">获取发布者号码</Text>
-
-              {!organizerPhone ? (
-
-                <>
-
-                  <Input className="form-input" placeholder="请输入口令" value={phoneKeyForm.key} onInput={(e) => setPhoneKeyForm({ key: e.detail.value })} />
-
-                  <View className="activity-bike-index-modalActions">
-
-                    <Button size="mini" onClick={() => setShowPhoneKey(false)}>取消</Button>
-
-                    <Button size="mini" type="primary" className="button-primary" onClick={onFetchPhone}>提交</Button>
-
-                  </View>
-
-                </>
-
-              ) : (
-
-                <>
-
-                  <View className="activity-bike-index-phoneResult">
-
-                    <Text className="activity-bike-index-phoneResultLabel">联系电话</Text>
-
-                    <Text className="activity-bike-index-phoneResultValue">{organizerPhone}</Text>
-
-                  </View>
-
-                  <View className="activity-bike-index-modalActions activity-bike-index-modalActionsDivider">
-
-                    <Button size="mini" onClick={() => setShowPhoneKey(false)}>关闭</Button>
-
-                  </View>
-
-                </>
-
-              )}
-
-            </View>
-
-          </View>
-
-        )}
-
-
-
-        {showShareKey && (
-          <ShareKeyGate
-            activityId={detail._id}
-            onPass={openSharePoster}
-            onClose={() => setShowShareKey(false)}
-          />
-        )}
-
-        {showSharePoster && shareKey && (
-          <SharePosterModal
-            payload={{
-              kind: 'activity',
-              data: {
-                title: detail.title,
-                activityKey: shareKey,
-                publisherName: detail.name,
-                startTimeText: formatDateTime(detail.time),
-                bannerSrc: heroBg,
-                h5Url: buildBikeH5Url(detail._id, shareKey),
-              },
-            }}
-            onClose={() => setShowSharePoster(false)}
-          />
-        )}
-
-        {showJoinList && (
-
-          <View className="activity-bike-index-modal">
-
-            <View className="activity-bike-index-modalBody">
-
-              <Text className="activity-bike-index-modalTitle">完整报名列表</Text>
-
-              {joinList.map((item) => (
-
-                <Text key={item._id} className="activity-bike-index-joinItem">{item.name} {item.phone}</Text>
-
-              ))}
-
               <View className="activity-bike-index-modalActions activity-bike-index-modalActionsDivider">
-                <Button size="mini" onClick={() => setShowJoinList(false)}>关闭</Button>
+                <Button size="mini" onClick={() => setShowPhoneKey(false)}>关闭</Button>
               </View>
+            </>
+          )}
+        </AnimatedModal>
 
-            </View>
+        <ShareKeyGate
+          visible={showShareKey}
+          activityId={detail._id}
+          onPass={openSharePoster}
+          onClose={() => setShowShareKey(false)}
+        />
 
+        <SharePosterModal
+          visible={showSharePoster && Boolean(shareKey)}
+          payload={shareKey ? {
+            kind: 'activity',
+            data: {
+              title: detail.title,
+              activityKey: shareKey,
+              publisherName: detail.name,
+              startTimeText: formatDateTime(detail.time),
+              bannerSrc: heroBg,
+              h5Url: buildBikeH5Url(detail._id, shareKey),
+            },
+          } : null}
+          onClose={() => setShowSharePoster(false)}
+          onShareImageReady={(tempPath) => {
+            shareCardPathRef.current = tempPath;
+          }}
+        />
+
+        <AnimatedModal
+          visible={showJoinList}
+          onClose={() => setShowJoinList(false)}
+          maskClassName="activity-bike-index-modal"
+          bodyClassName="activity-bike-index-modalBody"
+        >
+          <Text className="activity-bike-index-modalTitle">完整报名列表</Text>
+          {joinList.map((item) => (
+            <Text key={item._id} className="activity-bike-index-joinItem">{item.name} {item.phone}</Text>
+          ))}
+          <View className="activity-bike-index-modalActions activity-bike-index-modalActionsDivider">
+            <Button size="mini" onClick={() => setShowJoinList(false)}>关闭</Button>
           </View>
-
-        )}
+        </AnimatedModal>
 
       </View>
 
@@ -832,9 +802,9 @@ export default function BikeActivityPage() {
 
       <View className="activity-bike-index-list">
 
-        {list.map((item) => (
+        {list.map((item, index) => (
 
-          <ActivityItem key={item._id} data={item} />
+          <ActivityItem key={item._id} data={item} index={index} />
 
         ))}
 
@@ -848,74 +818,47 @@ export default function BikeActivityPage() {
 
 
 
-      {showDisclaimer && (
+      <ActivityDisclaimer
+        visible={showDisclaimer}
+        onClose={() => setShowDisclaimer(false)}
+        onAgree={() => {
+          setShowDisclaimer(false);
+          setShowApply(true);
+        }}
+      />
 
-        <ActivityDisclaimer
-
-          onClose={() => setShowDisclaimer(false)}
-
-          onAgree={() => {
-
-            setShowDisclaimer(false);
-
-            setShowApply(true);
-
-          }}
-
+      <AnimatedModal
+        visible={showApply}
+        onClose={() => setShowApply(false)}
+        maskClassName="activity-bike-index-modal"
+        bodyClassName="activity-bike-index-modalBodyLarge"
+      >
+        <Text className="activity-bike-index-modalTitle">发起骑行活动</Text>
+        <Input className="form-input" placeholder="昵称" value={applyForm.name} onInput={(e) => setApplyForm({ ...applyForm, name: e.detail.value })} />
+        <Input className="form-input" placeholder="电话号" type="number" value={applyForm.phone} onInput={(e) => setApplyForm({ ...applyForm, phone: e.detail.value })} />
+        <Input className="form-input" placeholder="活动主题" value={applyForm.title} onInput={(e) => setApplyForm({ ...applyForm, title: e.detail.value })} />
+        <Input className="form-input" placeholder="活动简介" value={applyForm.content} onInput={(e) => setApplyForm({ ...applyForm, content: e.detail.value })} />
+        <Input className="form-input" placeholder="活动口令" value={applyForm.key} onInput={(e) => setApplyForm({ ...applyForm, key: e.detail.value })} />
+        <FormDateTimePicker
+          label="活动时间"
+          date={startDate}
+          time={startTime}
+          onDateChange={setStartDate}
+          onTimeChange={setStartTime}
         />
-
-      )}
-
-
-
-      {showApply && (
-
-        <View className="activity-bike-index-modal">
-
-          <View className="activity-bike-index-modalBodyLarge">
-
-            <Text className="activity-bike-index-modalTitle">发起骑行活动</Text>
-
-            <Input className="form-input" placeholder="昵称" value={applyForm.name} onInput={(e) => setApplyForm({ ...applyForm, name: e.detail.value })} />
-
-            <Input className="form-input" placeholder="电话号" type="number" value={applyForm.phone} onInput={(e) => setApplyForm({ ...applyForm, phone: e.detail.value })} />
-
-            <Input className="form-input" placeholder="活动主题" value={applyForm.title} onInput={(e) => setApplyForm({ ...applyForm, title: e.detail.value })} />
-
-            <Input className="form-input" placeholder="活动简介" value={applyForm.content} onInput={(e) => setApplyForm({ ...applyForm, content: e.detail.value })} />
-
-            <Input className="form-input" placeholder="活动口令" value={applyForm.key} onInput={(e) => setApplyForm({ ...applyForm, key: e.detail.value })} />
-
-            <FormDateTimePicker
-              label="活动时间"
-              date={startDate}
-              time={startTime}
-              onDateChange={setStartDate}
-              onTimeChange={setStartTime}
-            />
-            <FormDateTimePicker
-              label="报名截止时间（可选）"
-              date={endDate}
-              time={endTime}
-              onDateChange={setEndDate}
-              onTimeChange={setEndTime}
-            />
-
-            <Input className="form-input" placeholder="活动奖品 (可选)" value={applyForm.prize} onInput={(e) => setApplyForm({ ...applyForm, prize: e.detail.value })} />
-
-            <View className="activity-bike-index-modalActions">
-
-              <Button size="mini" onClick={() => setShowApply(false)}>取消</Button>
-
-              <Button size="mini" type="primary" className="button-primary" onClick={onApply}>提交</Button>
-
-            </View>
-
-          </View>
-
+        <FormDateTimePicker
+          label="报名截止时间（可选）"
+          date={endDate}
+          time={endTime}
+          onDateChange={setEndDate}
+          onTimeChange={setEndTime}
+        />
+        <Input className="form-input" placeholder="活动奖品 (可选)" value={applyForm.prize} onInput={(e) => setApplyForm({ ...applyForm, prize: e.detail.value })} />
+        <View className="activity-bike-index-modalActions">
+          <Button size="mini" onClick={() => setShowApply(false)}>取消</Button>
+          <Button size="mini" type="primary" className="button-primary" onClick={onApply}>提交</Button>
         </View>
-
-      )}
+      </AnimatedModal>
 
     </View>
 

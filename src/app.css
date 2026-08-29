@@ -18,6 +18,109 @@ page {
   --dz-icon-phone: #3182ce;
   --dz-icon-wechat: #07c160;
   --dz-icon-nav: #0ea5e9;
+  --dz-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dz-dur-fast: 150ms;
+  --dz-dur-panel: 260ms;
+  --dz-dur-mask: 220ms;
+  --dz-dur-leave: 180ms;
+}
+
+/* —— Motion utilities —— */
+@keyframes dz-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dz-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dz-mask-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dz-mask-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes dz-body-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dz-body-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(12px); }
+}
+
+@keyframes dz-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@keyframes dz-poster-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.dz-fade-in {
+  animation: dz-fade-in var(--dz-dur-panel) var(--dz-ease-out) both;
+}
+
+.dz-list-enter {
+  animation: dz-fade-up 320ms var(--dz-ease-out) both;
+}
+
+.dz-img-fade {
+  opacity: 0;
+  transition: opacity var(--dz-dur-panel) var(--dz-ease-out);
+}
+
+.dz-img-fade--in {
+  opacity: 1;
+}
+
+.dz-modal-mask-enter {
+  animation: dz-mask-in var(--dz-dur-mask) var(--dz-ease-out) both;
+}
+
+.dz-modal-mask-leave {
+  animation: dz-mask-out var(--dz-dur-leave) var(--dz-ease-out) both;
+}
+
+.dz-modal-body-enter {
+  animation: dz-body-in var(--dz-dur-panel) var(--dz-ease-out) both;
+}
+
+.dz-modal-body-leave {
+  animation: dz-body-out var(--dz-dur-leave) var(--dz-ease-out) both;
+}
+
+.dz-menu-children {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 280ms var(--dz-ease-out), opacity 200ms var(--dz-ease-out);
+}
+
+.dz-menu-children--open {
+  max-height: 800px;
+  opacity: 1;
+}
+
+.dz-shimmer {
+  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 40%, #f1f5f9 80%);
+  background-size: 200% 100%;
+  animation: dz-shimmer 1.2s linear infinite;
+  border-radius: 12px;
+  min-height: 160px;
+}
+
+.dz-poster-preview-in {
+  animation: dz-poster-in var(--dz-dur-panel) var(--dz-ease-out) both;
 }
 
 .section-title {
@@ -73,10 +176,14 @@ button[type='primary'],
   background-color: #3182ce !important;
   border-color: #3182ce !important;
   color: #fff !important;
+  transition: background-color var(--dz-dur-fast) var(--dz-ease-out),
+    transform var(--dz-dur-fast) var(--dz-ease-out),
+    opacity var(--dz-dur-fast) var(--dz-ease-out);
 }
 
 button[type='primary']:active {
   background-color: #2b6cb0 !important;
+  transform: scale(0.98);
 }
 
 button[size='mini'][type='primary'] {
@@ -259,6 +366,7 @@ button[size='mini'][type='primary'] {
 .EmptyState-EmptyState-empty {
   padding: 80px 24px;
   text-align: center;
+  animation: dz-fade-in var(--dz-dur-panel) var(--dz-ease-out) both;
 }
 
 .EmptyState-EmptyState-title {
@@ -490,6 +598,13 @@ button[size='mini'][type='primary'] {
   color: #0ea5e9 !important;
 }
 
+.StoreAddressCard-StoreAddressCard-actionBtnPhone,
+.StoreAddressCard-StoreAddressCard-actionBtnWechat,
+.StoreAddressCard-StoreAddressCard-actionBtnNav {
+  transition: background-color var(--dz-dur-fast) var(--dz-ease-out),
+    border-color var(--dz-dur-fast) var(--dz-ease-out);
+}
+
 .StoreAddressCard-StoreAddressCard-actionBtnPhone:active {
   background: rgba(49, 130, 206, 0.1);
   border-color: rgba(49, 130, 206, 0.35);
@@ -580,6 +695,7 @@ button[size='mini'][type='primary'] {
   padding: 0 8px;
   border-radius: 999px;
   box-sizing: border-box;
+  transition: background-color var(--dz-dur-fast) var(--dz-ease-out);
 }
 
 .StoreItem-StoreItem-phoneBtn:active {
@@ -1709,6 +1825,7 @@ button[size='mini'][type='primary'] {
   border-radius: 24px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
   box-sizing: border-box;
+  transition: transform var(--dz-dur-fast) var(--dz-ease-out);
 }
 
 .home-index-brandItem:active {
@@ -2000,6 +2117,9 @@ button[size='mini'][type='primary'] {
   border-radius: 32px;
   padding: 8px 24px;
   font-size: 26px;
+  transition: background-color 180ms var(--dz-ease-out),
+    border-color 180ms var(--dz-ease-out),
+    color 180ms var(--dz-ease-out);
 }
 
 .store-list-index-chipActive {
@@ -2038,6 +2158,7 @@ button[size='mini'][type='primary'] {
   padding: 20px 40px;
   border-bottom: 1px solid #f1f5f9;
   box-sizing: border-box;
+  transition: background-color var(--dz-dur-fast) var(--dz-ease-out);
 }
 
 .MobileMenuList-MobileMenuList-row:active {
@@ -2090,6 +2211,7 @@ button[size='mini'][type='primary'] {
   height: 56rpx;
   flex-shrink: 0;
   margin-left: auto;
+  transition: transform 200ms var(--dz-ease-out);
 }
 
 .MobileMenuList-MobileMenuList-text {
@@ -2161,6 +2283,9 @@ button[size='mini'][type='primary'] {
   color: #64748b;
   background: #fff;
   border: 1px solid #e2e8f0;
+  transition: background-color 180ms var(--dz-ease-out),
+    border-color 180ms var(--dz-ease-out),
+    color 180ms var(--dz-ease-out);
 }
 
 .TimelinessToolbar-TimelinessToolbar-tabActive {
@@ -2258,10 +2383,13 @@ button[size='mini'][type='primary'] {
   background-color: #fff !important;
   border: 2px solid #3182ce !important;
   color: #3182ce !important;
+  transition: background-color var(--dz-dur-fast) var(--dz-ease-out),
+    transform var(--dz-dur-fast) var(--dz-ease-out);
 }
 
 .share-action-btn:active {
   background-color: #eff6ff !important;
+  transform: scale(0.98);
 }
 
 .share-action-btn--primary {
@@ -2326,6 +2454,10 @@ button[size='mini'][type='primary'] {
   text-align: center;
   color: #64748b;
   font-size: 28px;
+}
+
+.share-poster-shimmer {
+  margin: 0 0 24px;
 }
 
 .share-poster-preview-scroll {

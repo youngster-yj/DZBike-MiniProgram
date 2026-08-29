@@ -5,7 +5,7 @@ import Taro, {
   useReachBottom,
   useShareAppMessage,
 } from '@tarojs/taro';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchCollectList, fetchCollectDetail } from '@/services/api/collect';
 import { API } from '@/services/types';
 import { CollectCard } from '@/components/CollectCard';
@@ -18,6 +18,7 @@ import { formatDate } from '@/utils/timeUtil';
 import { SharePosterModal } from '@/components/SharePoster';
 import { ShareActionButton } from '@/components/ShareActionButton';
 import { buildCollectH5Url, buildCollectMiniPath } from '@/utils/shareUrl';
+import { ensureShareCardImage, getShareCardImage } from '@/utils/shareCardImage';
 
 
 export default function CollectPage() {
@@ -31,6 +32,7 @@ export default function CollectPage() {
   const [detail, setDetail] = useState<API.CollectListItemResponse | null>(null);
   const [showSharePoster, setShowSharePoster] = useState(false);
   const [gridSize, setGridSize] = useState(686);
+  const shareCardPathRef = useRef('');
 
   useEffect(() => {
     Taro.getSystemInfo({
@@ -71,6 +73,19 @@ export default function CollectPage() {
     else { setPage(1); setList([]); loadList(true); }
   }, [collectId]);
 
+  useEffect(() => {
+    shareCardPathRef.current = '';
+    const cover = detail?.imgUrl?.[0] ? toAssetUrl(detail.imgUrl[0]) : '';
+    if (!cover) return;
+    let cancelled = false;
+    ensureShareCardImage(cover).then((path) => {
+      if (!cancelled && path) shareCardPathRef.current = path;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [detail]);
+
   usePullDownRefresh(() => {
     if (collectId) loadDetail(collectId);
     else { setPage(1); setList([]); loadList(true); }
@@ -80,11 +95,27 @@ export default function CollectPage() {
     if (!collectId && hasMore && !loading) loadList(false);
   });
 
-  useShareAppMessage(() => ({
-    title: detail?.title || '精彩日常',
-    path: buildCollectMiniPath(collectId),
-    imageUrl: detail?.imgUrl?.[0] ? toAssetUrl(detail.imgUrl[0]) : undefined,
-  }));
+  useShareAppMessage(() => {
+    const title = detail?.title || '精彩日常';
+    const path = buildCollectMiniPath(collectId);
+    const coverSrc = detail?.imgUrl?.[0] ? toAssetUrl(detail.imgUrl[0]) : undefined;
+    const ready = shareCardPathRef.current || getShareCardImage(coverSrc);
+    if (ready) {
+      return { title, path, imageUrl: ready };
+    }
+    if (!coverSrc) {
+      return { title, path };
+    }
+    return {
+      title,
+      path,
+      promise: ensureShareCardImage(coverSrc).then((thumb) => {
+        if (thumb) shareCardPathRef.current = thumb;
+        // Menu-share last resort only
+        return { title, path, imageUrl: thumb || coverSrc };
+      }),
+    };
+  });
 
   if (collectId && detail) {
     const images = (detail.imgUrl || []).map((item) => toAssetUrl(item));
@@ -113,21 +144,23 @@ export default function CollectPage() {
           <ShareActionButton fullWidth onClick={() => setShowSharePoster(true)} />
         </View>
 
-        {showSharePoster && (
-          <SharePosterModal
-            payload={{
-              kind: 'collect',
-              data: {
-                title: detail.title,
-                detail: detail.detail || detail.detailMD,
-                shootTimeText: formatDate(detail.time),
-                imageUrl: images[0] || '',
-                h5Url: buildCollectH5Url(detail._id),
-              },
-            }}
-            onClose={() => setShowSharePoster(false)}
-          />
-        )}
+        <SharePosterModal
+          visible={showSharePoster}
+          payload={{
+            kind: 'collect',
+            data: {
+              title: detail.title,
+              detail: detail.detail || detail.detailMD,
+              shootTimeText: formatDate(detail.time),
+              imageUrl: images[0] || '',
+              h5Url: buildCollectH5Url(detail._id),
+            },
+          }}
+          onClose={() => setShowSharePoster(false)}
+          onShareImageReady={(tempPath) => {
+            shareCardPathRef.current = tempPath;
+          }}
+        />
       </View>
     );
   }
@@ -136,13 +169,13 @@ export default function CollectPage() {
     <View className="activity-collect-index-page">
       <View className="activity-collect-index-waterfall">
         <View className="activity-collect-index-column">
-          {list.filter((_, i) => i % 2 === 0).map((item) => (
-            <CollectCard key={item._id} data={item} />
+          {list.filter((_, i) => i % 2 === 0).map((item, index) => (
+            <CollectCard key={item._id} data={item} index={index} />
           ))}
         </View>
         <View className="activity-collect-index-column">
-          {list.filter((_, i) => i % 2 === 1).map((item) => (
-            <CollectCard key={item._id} data={item} />
+          {list.filter((_, i) => i % 2 === 1).map((item, index) => (
+            <CollectCard key={item._id} data={item} index={index} />
           ))}
         </View>
       </View>

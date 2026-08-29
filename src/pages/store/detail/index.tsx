@@ -1,6 +1,6 @@
 import { View, Swiper, SwiperItem, Image, Text, RichText } from '@tarojs/components';
 import { useRouter, useShareAppMessage } from '@tarojs/taro';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fetchStoreDetail } from '@/services/api/store';
 import { API } from '@/services/types';
 import { toAssetUrl } from '@/utils/assetUrl';
@@ -10,6 +10,7 @@ import { SharePosterModal } from '@/components/SharePoster';
 import { ShareActionButton } from '@/components/ShareActionButton';
 import { previewImages } from '@/utils/helpers';
 import { buildProductH5Url, buildProductMiniPath } from '@/utils/shareUrl';
+import { ensureShareCardImage, getShareCardImage } from '@/utils/shareCardImage';
 
 
 export default function StoreDetailPage() {
@@ -18,6 +19,7 @@ export default function StoreDetailPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<API.StoreDetailDataResponse | null>(null);
   const [showSharePoster, setShowSharePoster] = useState(false);
+  const shareCardPathRef = useRef('');
 
   useEffect(() => {
     if (!id) return;
@@ -28,11 +30,38 @@ export default function StoreDetailPage() {
 
   const shareImage = data?.imgUrl?.[0] ? toAssetUrl(data.imgUrl[0]) : undefined;
 
-  useShareAppMessage(() => ({
-    title: data?.name || '商品详情',
-    path: buildProductMiniPath(id),
-    imageUrl: shareImage,
-  }));
+  useEffect(() => {
+    shareCardPathRef.current = '';
+    if (!shareImage) return;
+    let cancelled = false;
+    ensureShareCardImage(shareImage).then((path) => {
+      if (!cancelled && path) shareCardPathRef.current = path;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [shareImage]);
+
+  useShareAppMessage(() => {
+    const title = data?.name || '商品详情';
+    const path = buildProductMiniPath(id);
+    const ready = shareCardPathRef.current || getShareCardImage(shareImage);
+    if (ready) {
+      return { title, path, imageUrl: ready };
+    }
+    if (!shareImage) {
+      return { title, path };
+    }
+    return {
+      title,
+      path,
+      promise: ensureShareCardImage(shareImage).then((thumb) => {
+        if (thumb) shareCardPathRef.current = thumb;
+        // Menu-share last resort only
+        return { title, path, imageUrl: thumb || shareImage };
+      }),
+    };
+  });
 
   if (loading) return <View className="store-detail-index-loading">加载中...</View>;
   if (!data) return <View className="store-detail-index-loading">商品不存在</View>;
@@ -94,19 +123,21 @@ export default function StoreDetailPage() {
         />
       </View>
 
-      {showSharePoster && (
-        <SharePosterModal
-          payload={{
-            kind: 'product',
-            data: {
-              title: data.name,
-              imageUrl: shareImage || '',
-              h5Url: buildProductH5Url(data.brand, data._id),
-            },
-          }}
-          onClose={() => setShowSharePoster(false)}
-        />
-      )}
+      <SharePosterModal
+        visible={showSharePoster}
+        payload={{
+          kind: 'product',
+          data: {
+            title: data.name,
+            imageUrl: shareImage || '',
+            h5Url: buildProductH5Url(data.brand, data._id),
+          },
+        }}
+        onClose={() => setShowSharePoster(false)}
+        onShareImageReady={(tempPath) => {
+          shareCardPathRef.current = tempPath;
+        }}
+      />
     </View>
   );
 }

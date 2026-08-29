@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { getVisibleStoreAddressDetailSync } from '@/services/platformConfig';
 import { submitComplaint } from '@/services/api/complaint';
 import { StoreAddressCard } from '@/components/StoreAddressCard';
+import { AnimatedModal } from '@/components/AnimatedModal';
 import { judgeName, judgePhone, showSuccess, showError } from '@/utils/helpers';
 import { getOrCreateDeviceId } from '@/utils/deviceId';
 import { usePlatformConfigVersion } from '@/store/platformConfigStore';
@@ -94,47 +95,48 @@ export default function ComplaintPage() {
         </Button>
       </View>
 
-      {showForm && (
-        <View className="complaint-index-modal">
-          <View className="complaint-index-modalBody">
-            <Text className="complaint-index-modalTitle">发起投诉</Text>
-            <Picker
-              mode="selector"
-              range={shopOptions}
-              value={shopIndex}
-              onChange={(e) => setShopIndex(Number(e.detail.value))}
-            >
-              <View className="complaint-index-picker form-picker">{shopOptions[shopIndex]}</View>
-            </Picker>
-            <Input
-              className="form-input"
-              placeholder="姓名或昵称"
-              value={form.name}
-              onInput={(e) => setForm({ ...form, name: e.detail.value })}
-            />
-            <Input
-              className="form-input"
-              placeholder="电话号"
-              type="number"
-              value={form.phone}
-              onInput={(e) => setForm({ ...form, phone: e.detail.value })}
-            />
-            <Textarea
-              className="form-textarea"
-              placeholder="投诉内容：服务态度、店铺违规、价格问题等"
-              maxlength={200}
-              value={form.content}
-              onInput={(e) => setForm({ ...form, content: e.detail.value })}
-            />
-            <View className="complaint-index-modalActions">
-              <Button size="mini" onClick={() => setShowForm(false)}>取消</Button>
-              <Button size="mini" type="primary" className="button-primary" loading={submitting} onClick={onSubmit}>
-                提交
-              </Button>
-            </View>
-          </View>
+      <AnimatedModal
+        visible={showForm}
+        onClose={() => setShowForm(false)}
+        maskClassName="complaint-index-modal"
+        bodyClassName="complaint-index-modalBody"
+      >
+        <Text className="complaint-index-modalTitle">发起投诉</Text>
+        <Picker
+          mode="selector"
+          range={shopOptions}
+          value={shopIndex}
+          onChange={(e) => setShopIndex(Number(e.detail.value))}
+        >
+          <View className="complaint-index-picker form-picker">{shopOptions[shopIndex]}</View>
+        </Picker>
+        <Input
+          className="form-input"
+          placeholder="姓名或昵称"
+          value={form.name}
+          onInput={(e) => setForm({ ...form, name: e.detail.value })}
+        />
+        <Input
+          className="form-input"
+          placeholder="电话号"
+          type="number"
+          value={form.phone}
+          onInput={(e) => setForm({ ...form, phone: e.detail.value })}
+        />
+        <Textarea
+          className="form-textarea"
+          placeholder="投诉内容：服务态度、店铺违规、价格问题等"
+          maxlength={200}
+          value={form.content}
+          onInput={(e) => setForm({ ...form, content: e.detail.value })}
+        />
+        <View className="complaint-index-modalActions">
+          <Button size="mini" onClick={() => setShowForm(false)}>取消</Button>
+          <Button size="mini" type="primary" className="button-primary" loading={submitting} onClick={onSubmit}>
+            提交
+          </Button>
         </View>
-      )}
+      </AnimatedModal>
     </View>
   );
 }
