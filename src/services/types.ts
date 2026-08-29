@@ -68,6 +68,8 @@ export declare namespace API {
     prize?: string;
     joinCount: number;
     isEnd: boolean;
+    meetupShop?: string;
+    difficulty?: 'leisure' | 'advanced' | 'challenge';
     _id: string;
   }
 
@@ -117,6 +119,9 @@ export declare namespace API {
     endTime?: number;
     title: string;
     isEnd: boolean;
+    meetupShop?: string;
+    difficulty?: 'leisure' | 'advanced' | 'challenge';
+    joinCount?: number;
     _id: string;
   }
 
@@ -191,6 +196,9 @@ export interface StoreListParamsProps {
   page?: number;
   limit?: number;
   isStock?: boolean;
+  sort?: 'default' | 'price_asc' | 'price_desc';
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 export interface ActiveFormParamsProps {
@@ -202,12 +210,15 @@ export interface ActiveFormParamsProps {
   endTime?: number;
   key: string;
   prize?: string;
+  meetupShop?: string;
+  limit?: number;
+  difficulty?: 'leisure' | 'advanced' | 'challenge';
 }
 
 export interface ShopActiveFormParamsProps {
   activityId: string;
-  name: string;
-  phone: string;
+  name?: string;
+  phone?: string;
   deviceId?: string;
 }
 
@@ -222,4 +233,12 @@ export interface ComplaintFormParamsProps {
 export interface WxLoginData {
   token: string;
   openid: string;
+}
+
+export interface WxProfileData {
+  openid: string;
+  nickName: string;
+  avatarUrl: string;
+  phone: string;
+  lastLoginAt?: number;
 }

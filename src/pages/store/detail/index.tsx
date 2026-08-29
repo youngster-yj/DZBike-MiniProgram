@@ -1,16 +1,22 @@
 import { View, Swiper, SwiperItem, Image, Text, RichText } from '@tarojs/components';
 import { useRouter, useShareAppMessage } from '@tarojs/taro';
 import { useEffect, useRef, useState } from 'react';
-import { fetchStoreDetail } from '@/services/api/store';
+import {
+  fetchStoreDetail,
+  addStoreFavorite,
+  removeStoreFavorite,
+  checkStoreFavorite,
+} from '@/services/api/store';
 import { API } from '@/services/types';
 import { toAssetUrl } from '@/utils/assetUrl';
 import { getBrandMapSync, getCategoryMapSync, getStoreByShop } from '@/services/platformConfig';
 import { StoreAddressCard } from '@/components/StoreAddressCard';
 import { SharePosterModal } from '@/components/SharePoster';
 import { ShareActionButton } from '@/components/ShareActionButton';
-import { previewImages } from '@/utils/helpers';
+import { previewImages, showError, showSuccess } from '@/utils/helpers';
 import { buildProductH5Url, buildProductMiniPath } from '@/utils/shareUrl';
 import { ensureShareCardImage, getShareCardImage } from '@/utils/shareCardImage';
+import { ensureWxSession } from '@/utils/wxProfile';
 
 
 export default function StoreDetailPage() {
@@ -19,6 +25,8 @@ export default function StoreDetailPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<API.StoreDetailDataResponse | null>(null);
   const [showSharePoster, setShowSharePoster] = useState(false);
+  const [favorited, setFavorited] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
   const shareCardPathRef = useRef('');
 
   useEffect(() => {
@@ -26,7 +34,38 @@ export default function StoreDetailPage() {
     fetchStoreDetail(id)
       .then((res) => res.ok && setData(res.data))
       .finally(() => setLoading(false));
+    ensureWxSession()
+      .then(() => checkStoreFavorite(id))
+      .then((res) => {
+        if (res.ok) setFavorited(!!res.data?.favorited);
+      })
+      .catch(() => {});
   }, [id]);
+
+  const toggleFavorite = async () => {
+    if (!id || favLoading) return;
+    setFavLoading(true);
+    try {
+      await ensureWxSession();
+      if (favorited) {
+        const res = await removeStoreFavorite(id);
+        if (res.ok) {
+          setFavorited(false);
+          showSuccess('已取消收藏');
+        }
+      } else {
+        const res = await addStoreFavorite(id);
+        if (res.ok) {
+          setFavorited(true);
+          showSuccess('已收藏');
+        }
+      }
+    } catch (e) {
+      showError(e instanceof Error ? e.message : '操作失败');
+    } finally {
+      setFavLoading(false);
+    }
+  };
 
   const shareImage = data?.imgUrl?.[0] ? toAssetUrl(data.imgUrl[0]) : undefined;
 
@@ -96,6 +135,12 @@ export default function StoreDetailPage() {
         </View>
         <View className="store-detail-index-nameRow">
           <Text className="store-detail-index-name">{data.name}</Text>
+          <View
+            className={`store-detail-favHeart${favorited ? ' store-detail-favHeart--on' : ''}`}
+            onClick={toggleFavorite}
+          >
+            <Text className="store-detail-favHeartIcon">{favorited ? '♥' : '♡'}</Text>
+          </View>
         </View>
         <View className="store-detail-index-meta">
           <Text>{brandLabel}</Text>

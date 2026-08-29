@@ -1,4 +1,4 @@
-import { View, Text, Input, Button, Image } from '@tarojs/components';
+import { View, Text, Input, Button, Image, Picker } from '@tarojs/components';
 import Taro, {
   useRouter,
   usePullDownRefresh,
@@ -12,6 +12,7 @@ import {
   applyActivity,
   joinActivity,
   fetchOrganizerPhone,
+  fetchShareKey,
   fetchJoinList,
 } from '@/services/api/activity';
 import { API } from '@/services/types';
@@ -21,7 +22,7 @@ import { TimelinessToolbar } from '@/components/TimelinessToolbar';
 import { ActivityDisclaimer } from '@/components/ActivityDisclaimer';
 import { FormDateTimePicker, buildTimestamp } from '@/components/FormDateTimePicker';
 import { formatDateTime, isTimestampFuture } from '@/utils/timeUtil';
-import { judgeName, judgePhone, showSuccess, showError } from '@/utils/helpers';
+import { judgeName, judgePhone, showSuccess, showError, makePhoneCall } from '@/utils/helpers';
 import { ApiError } from '@/services/request';
 import { requestActivityAuditSubscribe } from '@/utils/wxSubscribe';
 import officialBg from '@/assets/activity/official.png';
@@ -33,6 +34,16 @@ import { ShareActionButton } from '@/components/ShareActionButton';
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { buildBikeH5Url, buildBikeMiniPath } from '@/utils/shareUrl';
 import { ensureShareCardImage, getShareCardImage } from '@/utils/shareCardImage';
+import { hasCompleteProfile, hasWxIdentity, refreshWxProfile } from '@/utils/wxProfile';
+import { getVisibleStoreAddressDetailSync, getShopDisplayNameSync } from '@/services/platformConfig';
+
+/** 分享/Canvas 用包内固定路径（与 copy 到 dist/assets 一致） */
+const SHARE_BANNER_OFFICIAL = '/assets/activity/official.png';
+const SHARE_BANNER_PERSONAL = '/assets/activity/personal.png';
+
+function getBikeShareBannerPath(source?: string) {
+  return source === 'personal' ? SHARE_BANNER_PERSONAL : SHARE_BANNER_OFFICIAL;
+}
 
 const TIMELINESS_VALUES: Array<'underway' | 'finished'> = ['underway', 'finished'];
 
@@ -86,6 +97,7 @@ export default function BikeActivityPage() {
 
   const [applyForm, setApplyForm] = useState({
     name: '', phone: '', title: '', content: '', key: '', prize: '',
+    meetupShop: '', limit: '50', difficulty: '' as '' | 'leisure' | 'advanced' | 'challenge',
   });
   const [startDate, setStartDate] = useState('');
   const [startTime, setStartTime] = useState('08:00');
@@ -93,6 +105,7 @@ export default function BikeActivityPage() {
   const [endTime, setEndTime] = useState('');
 
   const [joinForm, setJoinForm] = useState({ name: '', phone: '', key: '' });
+  const [wxJoinMode, setWxJoinMode] = useState(false);
 
   const [joinListForm, setJoinListForm] = useState({ name: '', phone: '' });
 
@@ -225,7 +238,7 @@ export default function BikeActivityPage() {
   useEffect(() => {
     shareCardPathRef.current = '';
     if (!detail) return;
-    const cover = detail.source === 'personal' ? personalBg : officialBg;
+    const cover = getBikeShareBannerPath(detail.source);
     let cancelled = false;
     ensureShareCardImage(cover).then((path) => {
       if (!cancelled && path) shareCardPathRef.current = path;
@@ -240,7 +253,7 @@ export default function BikeActivityPage() {
     const path = activityId
       ? buildBikeMiniPath(activityId, shareKeyRef.current || activityKeyFromQuery)
       : '/pages/activity/bike/index';
-    const coverSrc = detail?.source === 'personal' ? personalBg : officialBg;
+    const coverSrc = getBikeShareBannerPath(detail?.source);
     const ready = shareCardPathRef.current || getShareCardImage(coverSrc);
     if (ready) {
       return { title, path, imageUrl: ready };
@@ -273,118 +286,108 @@ export default function BikeActivityPage() {
 
 
   const onApply = async () => {
-
     const nameErr = judgeName(applyForm.name);
-
     const phoneErr = judgePhone(applyForm.phone);
-
     if (nameErr !== true) return showError(String(nameErr));
-
     if (phoneErr !== true) return showError(String(phoneErr));
-
     if (!applyForm.title || !applyForm.content || !applyForm.key || !startDate || !startTime) {
       return showError('请填写完整活动信息');
     }
+    const limitNum = Number(applyForm.limit);
+    if (!Number.isFinite(limitNum) || limitNum < 1) return showError('请填写有效报名人数');
     try {
       await requestActivityAuditSubscribe();
       const res = await applyActivity({
-        ...applyForm,
+        name: applyForm.name,
+        phone: applyForm.phone,
+        title: applyForm.title,
+        content: applyForm.content,
+        key: applyForm.key,
+        prize: applyForm.prize || undefined,
+        meetupShop: applyForm.meetupShop || undefined,
+        limit: limitNum,
+        difficulty: applyForm.difficulty || undefined,
         time: buildTimestamp(startDate, startTime),
         endTime: endDate && endTime ? buildTimestamp(endDate, endTime) : undefined,
       });
-
       if (res.ok) {
-
         showSuccess('提交成功，等待审核');
-
         setShowApply(false);
-
       }
-
     } catch (e) {
-
       showApiError(e, '提交失败');
-
     }
-
   };
 
-
+  const openJoinModal = async () => {
+    try {
+      const profile = await refreshWxProfile();
+      if (hasCompleteProfile(profile)) {
+        setWxJoinMode(true);
+        setJoinForm({
+          name: profile!.nickName,
+          phone: profile!.phone,
+          key: '',
+        });
+        setShowJoin(true);
+        return;
+      }
+      showError('请先在「我的」完善微信昵称与手机号后再报名');
+    } catch {
+      setWxJoinMode(false);
+      setJoinForm({ name: '', phone: '', key: '' });
+      setShowJoin(true);
+    }
+  };
 
   const onJoin = async () => {
-
-    const nameErr = judgeName(joinForm.name);
-
-    const phoneErr = judgePhone(joinForm.phone);
-
-    if (nameErr !== true) return showError(String(nameErr));
-
-    if (phoneErr !== true) return showError(String(phoneErr));
-
-    if (!joinForm.key) return showError('请输入活动口令');
-
-    if (!detail) return;
-
-    try {
-
-      const res = await joinActivity({
-
-        activityId: detail._id,
-
-        ...joinForm,
-
-      });
-
-      if (res.ok) {
-
-        showSuccess(res.reason || '报名成功');
-
-        setShowJoin(false);
-
-        loadDetail(detail._id);
-
+    if (wxJoinMode) {
+      if (!joinForm.name || !joinForm.phone) {
+        return showError('请先在「我的」完善微信资料与手机号');
       }
-
-    } catch (e) {
-
-      showApiError(e, '报名失败');
-
+    } else {
+      const nameErr = judgeName(joinForm.name);
+      const phoneErr = judgePhone(joinForm.phone);
+      if (nameErr !== true) return showError(String(nameErr));
+      if (phoneErr !== true) return showError(String(phoneErr));
+      if (!joinForm.key) return showError('请输入活动口令');
     }
-
+    if (!detail) return;
+    try {
+      await requestActivityAuditSubscribe();
+      const res = await joinActivity({
+        activityId: detail._id,
+        name: wxJoinMode ? undefined : joinForm.name,
+        phone: wxJoinMode ? undefined : joinForm.phone,
+        key: wxJoinMode ? undefined : joinForm.key,
+      });
+      if (res.ok) {
+        showSuccess('报名成功');
+        setShowJoin(false);
+        loadDetail(detail._id);
+      }
+    } catch (e) {
+      showApiError(e, '报名失败');
+    }
   };
 
 
 
   const onFetchPhone = async () => {
-
     if (!detail) return;
-
     if (!phoneKeyForm.key) return showError('请输入口令');
-
     try {
-
       const res = await fetchOrganizerPhone({
-
         activityId: detail._id,
-
         key: phoneKeyForm.key,
-
       });
-
       if (res.ok) {
-
-        showSuccess('手机号获取成功');
-
-        setOrganizerPhone(res.data);
-
+        setShowPhoneKey(false);
+        makePhoneCall(res.data);
       }
-
     } catch (e) {
-
       showApiError(e, '验证失败');
-
     }
-
   };
 
 
@@ -435,14 +438,22 @@ export default function BikeActivityPage() {
 
 
 
-  const openPhoneKeyModal = () => {
-
+  const openPhoneKeyModal = async () => {
+    if (!detail) return;
     setOrganizerPhone('');
-
     setPhoneKeyForm({ key: '' });
-
+    if (hasWxIdentity()) {
+      try {
+        const res = await fetchOrganizerPhone({ activityId: detail._id });
+        if (res.ok) {
+          makePhoneCall(res.data);
+        }
+      } catch (e) {
+        showApiError(e, '获取失败');
+      }
+      return;
+    }
     setShowPhoneKey(true);
-
   };
 
   const openSharePoster = (key: string) => {
@@ -452,14 +463,43 @@ export default function BikeActivityPage() {
     setShowSharePoster(true);
   };
 
-  const onShareActivity = () => {
+  const onShareActivity = async () => {
+    if (!detail) return;
     const existingKey = shareKeyRef.current || activityKeyFromQuery;
     if (existingKey) {
       openSharePoster(existingKey);
       return;
     }
+    if (hasWxIdentity()) {
+      try {
+        const res = await fetchShareKey({ activityId: detail._id });
+        if (res.ok && res.data?.key) {
+          openSharePoster(res.data.key);
+          return;
+        }
+        showError(res.reason || '获取分享口令失败');
+      } catch (e) {
+        showApiError(e, '获取分享口令失败');
+      }
+      return;
+    }
     setShowShareKey(true);
   };
+
+  const sharePosterPayload = useMemo(() => {
+    if (!detail || !shareKey) return null;
+    return {
+      kind: 'activity' as const,
+      data: {
+        title: detail.title,
+        activityKey: shareKey,
+        publisherName: detail.name,
+        startTimeText: formatDateTime(detail.time),
+        bannerSrc: getBikeShareBannerPath(detail.source),
+        h5Url: buildBikeH5Url(detail._id, shareKey),
+      },
+    };
+  }, [detail, shareKey]);
 
 
 
@@ -542,12 +582,34 @@ export default function BikeActivityPage() {
               </View>
 
               <View className="activity-bike-index-infoItem">
-
                 <Text className="activity-bike-index-infoLabel">开始时间</Text>
-
                 <Text className="activity-bike-index-infoValue">{formatDateTime(detail.time)}</Text>
-
               </View>
+
+              {detail.meetupShop ? (
+                <View className="activity-bike-index-infoItem">
+                  <Text className="activity-bike-index-infoLabel">集合门店</Text>
+                  <Text className="activity-bike-index-infoValue">
+                    {getShopDisplayNameSync(detail.meetupShop) || detail.meetupShop}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View className="activity-bike-index-infoItem">
+                <Text className="activity-bike-index-infoLabel">报名人数</Text>
+                <Text className="activity-bike-index-infoValue">
+                  {Math.max(detail.joinCount ?? 0, detail.joinData?.length ?? 0)}/{detail.limit}
+                </Text>
+              </View>
+
+              {detail.difficulty ? (
+                <View className="activity-bike-index-infoItem">
+                  <Text className="activity-bike-index-infoLabel">难度</Text>
+                  <Text className="activity-bike-index-infoValue">
+                    {{ leisure: '休闲', advanced: '进阶', challenge: '挑战' }[detail.difficulty]}
+                  </Text>
+                </View>
+              ) : null}
 
               {detail.endTime ? (
 
@@ -615,7 +677,7 @@ export default function BikeActivityPage() {
 
                       <Text className={`activity-bike-index-participantTag${item.isCheck ? ' activity-bike-index-participantTagDone' : ''}`}>
 
-                        {item.isCheck ? '已领取' : '等待到店'}
+                        {item.isCheck ? '已领取' : '待领取'}
 
                       </Text>
 
@@ -657,7 +719,7 @@ export default function BikeActivityPage() {
               className="activity-bike-index-joinBtn button-primary footer-action-btn"
               type="primary"
               hoverClass="none"
-              onClick={() => setShowJoin(true)}
+              onClick={openJoinModal}
             >
               参加活动
             </Button>
@@ -673,9 +735,19 @@ export default function BikeActivityPage() {
           bodyClassName="activity-bike-index-modalBody"
         >
           <Text className="activity-bike-index-modalTitle">参加活动</Text>
-          <Input className="form-input" placeholder="姓名或昵称" value={joinForm.name} onInput={(e) => setJoinForm({ ...joinForm, name: e.detail.value })} />
-          <Input className="form-input" placeholder="手机号" type="number" value={joinForm.phone} onInput={(e) => setJoinForm({ ...joinForm, phone: e.detail.value })} />
-          <Input className="form-input" placeholder="活动口令" value={joinForm.key} onInput={(e) => setJoinForm({ ...joinForm, key: e.detail.value })} />
+          {wxJoinMode ? (
+            <>
+              <Text className="form-input" style={{ opacity: 0.85 }}>{joinForm.name}</Text>
+              <Text className="form-input" style={{ opacity: 0.85 }}>{joinForm.phone}</Text>
+              <Text className="share-poster-remark">已使用微信资料报名，无需口令</Text>
+            </>
+          ) : (
+            <>
+              <Input className="form-input" placeholder="姓名或昵称" value={joinForm.name} onInput={(e) => setJoinForm({ ...joinForm, name: e.detail.value })} />
+              <Input className="form-input" placeholder="手机号" type="number" value={joinForm.phone} onInput={(e) => setJoinForm({ ...joinForm, phone: e.detail.value })} />
+              <Input className="form-input" placeholder="活动口令" value={joinForm.key} onInput={(e) => setJoinForm({ ...joinForm, key: e.detail.value })} />
+            </>
+          )}
           <View className="activity-bike-index-modalActions">
             <Button size="mini" onClick={() => setShowJoin(false)}>取消</Button>
             <Button size="mini" type="primary" className="button-primary" onClick={onJoin}>提交</Button>
@@ -690,7 +762,8 @@ export default function BikeActivityPage() {
           maskClassName="activity-bike-index-modal"
           bodyClassName="activity-bike-index-modalBody"
         >
-          <Text className="activity-bike-index-modalTitle">获取参与人员信息</Text>
+          <Text className="activity-bike-index-modalTitle">仅活动创建者可查看</Text>
+          <Text className="share-poster-remark">请输入创建本活动时的姓名与电话，用于核验发布者身份</Text>
           <Input className="form-input" placeholder="请输入姓名或昵称" value={joinListForm.name} onInput={(e) => setJoinListForm({ ...joinListForm, name: e.detail.value })} />
           <Input className="form-input" placeholder="请输入电话号" type="number" value={joinListForm.phone} onInput={(e) => setJoinListForm({ ...joinListForm, phone: e.detail.value })} />
           <View className="activity-bike-index-modalActions">
@@ -736,17 +809,7 @@ export default function BikeActivityPage() {
 
         <SharePosterModal
           visible={showSharePoster && Boolean(shareKey)}
-          payload={shareKey ? {
-            kind: 'activity',
-            data: {
-              title: detail.title,
-              activityKey: shareKey,
-              publisherName: detail.name,
-              startTimeText: formatDateTime(detail.time),
-              bannerSrc: heroBg,
-              h5Url: buildBikeH5Url(detail._id, shareKey),
-            },
-          } : null}
+          payload={sharePosterPayload}
           onClose={() => setShowSharePoster(false)}
           onShareImageReady={(tempPath) => {
             shareCardPathRef.current = tempPath;
@@ -821,8 +884,20 @@ export default function BikeActivityPage() {
       <ActivityDisclaimer
         visible={showDisclaimer}
         onClose={() => setShowDisclaimer(false)}
-        onAgree={() => {
+        onAgree={async () => {
           setShowDisclaimer(false);
+          try {
+            const profile = await refreshWxProfile();
+            if (hasCompleteProfile(profile)) {
+              setApplyForm((f) => ({
+                ...f,
+                name: profile!.nickName,
+                phone: profile!.phone,
+              }));
+            }
+          } catch {
+            /* ignore */
+          }
           setShowApply(true);
         }}
       />
@@ -839,6 +914,44 @@ export default function BikeActivityPage() {
         <Input className="form-input" placeholder="活动主题" value={applyForm.title} onInput={(e) => setApplyForm({ ...applyForm, title: e.detail.value })} />
         <Input className="form-input" placeholder="活动简介" value={applyForm.content} onInput={(e) => setApplyForm({ ...applyForm, content: e.detail.value })} />
         <Input className="form-input" placeholder="活动口令" value={applyForm.key} onInput={(e) => setApplyForm({ ...applyForm, key: e.detail.value })} />
+        <Picker
+          mode="selector"
+          range={getVisibleStoreAddressDetailSync().map((s) => s.title || s.shop)}
+          onChange={(e) => {
+            const shops = getVisibleStoreAddressDetailSync();
+            const shop = shops[Number(e.detail.value)];
+            if (shop) setApplyForm({ ...applyForm, meetupShop: shop.shop });
+          }}
+        >
+          <View className="form-input" style={{ display: 'flex', alignItems: 'center' }}>
+            {applyForm.meetupShop
+              ? (getShopDisplayNameSync(applyForm.meetupShop) || applyForm.meetupShop)
+              : '集合门店（可选）'}
+          </View>
+        </Picker>
+        <Input
+          className="form-input"
+          placeholder="报名人数上限"
+          type="number"
+          value={applyForm.limit}
+          onInput={(e) => setApplyForm({ ...applyForm, limit: e.detail.value })}
+        />
+        <View className="store-list-index-toolbar" style={{ paddingLeft: 0, paddingRight: 0, borderBottom: 'none' }}>
+          {([
+            { v: '', l: '不限难度' },
+            { v: 'leisure', l: '休闲' },
+            { v: 'advanced', l: '进阶' },
+            { v: 'challenge', l: '挑战' },
+          ] as const).map((d) => (
+            <View
+              key={d.v || 'none'}
+              className={`store-list-index-priceChip${applyForm.difficulty === d.v ? ' store-list-index-priceChipActive' : ''}`}
+              onClick={() => setApplyForm({ ...applyForm, difficulty: d.v })}
+            >
+              <Text>{d.l}</Text>
+            </View>
+          ))}
+        </View>
         <FormDateTimePicker
           label="活动时间"
           date={startDate}

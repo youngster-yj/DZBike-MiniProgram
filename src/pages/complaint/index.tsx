@@ -7,6 +7,7 @@ import { AnimatedModal } from '@/components/AnimatedModal';
 import { judgeName, judgePhone, showSuccess, showError } from '@/utils/helpers';
 import { getOrCreateDeviceId } from '@/utils/deviceId';
 import { usePlatformConfigVersion } from '@/store/platformConfigStore';
+import { hasCompleteProfile, refreshWxProfile } from '@/utils/wxProfile';
 
 
 export default function ComplaintPage() {
@@ -29,6 +30,22 @@ export default function ComplaintPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', content: '' });
   const [submitting, setSubmitting] = useState(false);
+
+  const openForm = async () => {
+    try {
+      const profile = await refreshWxProfile();
+      if (hasCompleteProfile(profile)) {
+        setForm((f) => ({
+          ...f,
+          name: profile!.nickName,
+          phone: profile!.phone,
+        }));
+      }
+    } catch {
+      /* ignore */
+    }
+    setShowForm(true);
+  };
 
   const onSubmit = async () => {
     const nameErr = judgeName(form.name);
@@ -90,7 +107,7 @@ export default function ComplaintPage() {
       </View>
 
       <View className="complaint-index-footer">
-        <Button className="complaint-index-complaintBtn button-primary" type="primary" onClick={() => setShowForm(true)}>
+        <Button className="complaint-index-complaintBtn button-primary" type="primary" onClick={openForm}>
           发起投诉
         </Button>
       </View>

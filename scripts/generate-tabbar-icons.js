@@ -91,11 +91,21 @@ function drawComplaint(png, color) {
   strokeRect(png, 32, 56, 16, 6, T, color);
 }
 
+function drawMine(png, color) {
+  // head
+  strokeRect(png, 34, 16, 14, 14, T, color);
+  // shoulders
+  drawLine(png, 22, 52, 40, 36, T, color);
+  drawLine(png, 58, 52, 40, 36, T, color);
+  strokeRect(png, 22, 48, 36, 14, T, color);
+}
+
 const ICONS = {
   home: drawHome,
   goods: drawShopping,
   activity: drawActivity,
   complaint: drawComplaint,
+  mine: drawMine,
 };
 
 function renderIcon(name, active) {
@@ -122,5 +132,7 @@ ensureIcon('activity.png', 'activity', false);
 ensureIcon('activity-active.png', 'activity', true);
 ensureIcon('complaint.png', 'complaint', false);
 ensureIcon('complaint-active.png', 'complaint', true);
+ensureIcon('mine.png', 'mine', false);
+ensureIcon('mine-active.png', 'mine', true);
 
 console.log('Tab bar icons generated.');

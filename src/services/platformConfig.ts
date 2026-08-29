@@ -270,6 +270,19 @@ export function getStoreByShop(shop: string): StoreAddressItemInfoProps | undefi
   );
 }
 
+/** 与 Web getShowStoreAddressDetail 对齐：all/空 → 全部可见门店 */
+export function getShowStoreAddressDetailSync(
+  shop?: string | null,
+): StoreAddressItemInfoProps[] {
+  const code = (shop || '').trim();
+  if (!code || code.toLowerCase() === 'all') {
+    return getVisibleStoreAddressDetailSync();
+  }
+  return getVisibleStoreAddressDetailSync().filter(
+    (item) => item.shop.toUpperCase() === code.toUpperCase(),
+  );
+}
+
 export function getShopDisplayNameSync(shop: string): string | null {
   if (!shop || shop === 'all') return null;
   const store = getStoreAddressDetailSync().find(

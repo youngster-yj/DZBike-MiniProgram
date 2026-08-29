@@ -31,14 +31,31 @@ export function applyActivity(data: ActiveFormParamsProps) {
 
 export function joinActivity(data: {
   activityId: string;
-  name: string;
-  phone: string;
-  key: string;
+  name?: string;
+  phone?: string;
+  key?: string;
 }) {
   return NetWorkApi<API.ActionSucceeded>({
     method: 'post',
     url: 'activity/join',
     data,
+  });
+}
+
+export function fetchMyActivityJoins() {
+  return NetWorkApi<{
+    ok: boolean;
+    reason?: string;
+    data: Array<{
+      joinId: string;
+      name: string;
+      phone: string;
+      isCheck: boolean;
+      activity: API.ActivityListItemResponse | null;
+    }>;
+  }>({
+    method: 'get',
+    url: 'activity/my/joins',
   });
 }
 
@@ -50,10 +67,18 @@ export function judgeActivityKey(data: { activityId: string; key: string }) {
   });
 }
 
-export function fetchOrganizerPhone(data: { activityId: string; key: string }) {
+export function fetchOrganizerPhone(data: { activityId: string; key?: string }) {
   return NetWorkApi<API.UserPhoneResponse>({
     method: 'post',
     url: 'activity/user/phone',
+    data,
+  });
+}
+
+export function fetchShareKey(data: { activityId: string }) {
+  return NetWorkApi<{ ok: boolean; reason?: string; data: { key: string } }>({
+    method: 'post',
+    url: 'activity/share/key',
     data,
   });
 }

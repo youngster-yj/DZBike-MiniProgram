@@ -51,6 +51,11 @@ export function ActivityItem({ data, index = 0 }: ActivityItemProps) {
           <Text className={`ActivityItem-ActivityItem-tag${isPersonal ? ' ActivityItem-ActivityItem-tagPersonal' : ''}`}>
             {isPersonal ? '个人活动' : '官方活动'}
           </Text>
+          {data.difficulty ? (
+            <Text className="ActivityItem-ActivityItem-tag" style={{ marginLeft: '8px' }}>
+              {{ leisure: '休闲', advanced: '进阶', challenge: '挑战' }[data.difficulty]}
+            </Text>
+          ) : null}
         </View>
       </View>
     </View>

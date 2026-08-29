@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { StoreAddressCard } from '@/components/StoreAddressCard';
 import { ImagesGridBox } from '@/components/ImagesGridBox';
 import { toAssetUrl } from '@/utils/assetUrl';
-import { getStoreByShop } from '@/services/platformConfig';
+import { getShowStoreAddressDetailSync } from '@/services/platformConfig';
 import { formatDate } from '@/utils/timeUtil';
 import { SharePosterModal } from '@/components/SharePoster';
 import { ShareActionButton } from '@/components/ShareActionButton';
@@ -119,7 +119,7 @@ export default function CollectPage() {
 
   if (collectId && detail) {
     const images = (detail.imgUrl || []).map((item) => toAssetUrl(item));
-    const storeInfo = getStoreByShop(detail.shop);
+    const storeList = getShowStoreAddressDetailSync(detail.shop);
 
     return (
       <View className="activity-collect-index-page activity-collect-index-pageDetail">
@@ -134,9 +134,11 @@ export default function CollectPage() {
           {detail.detail && <Text className="activity-collect-index-content">{detail.detail}</Text>}
           {detail.detailMD && <Text className="activity-collect-index-content">{detail.detailMD}</Text>}
         </View>
-        {storeInfo && (
+        {storeList.length > 0 && (
           <View className="activity-collect-index-storeWrap">
-            <StoreAddressCard info={storeInfo} />
+            {storeList.map((info) => (
+              <StoreAddressCard key={info.shop} info={info} />
+            ))}
           </View>
         )}
 

@@ -13,7 +13,7 @@ import { TimelinessToolbar } from '@/components/TimelinessToolbar';
 import { StoreAddressCard } from '@/components/StoreAddressCard';
 import { ImagesGridBox } from '@/components/ImagesGridBox';
 import { toAssetUrl } from '@/utils/assetUrl';
-import { getStoreByShop } from '@/services/platformConfig';
+import { getShowStoreAddressDetailSync } from '@/services/platformConfig';
 import { formatDateTime, isTimestampFuture } from '@/utils/timeUtil';
 import { judgeName, judgePhone, showSuccess, showError } from '@/utils/helpers';
 import { getOrCreateDeviceId } from '@/utils/deviceId';
@@ -23,6 +23,7 @@ import { ShareActionButton } from '@/components/ShareActionButton';
 import { buildShopH5Url, buildShopMiniPath } from '@/utils/shareUrl';
 import { ensureShareCardImage, getShareCardImage } from '@/utils/shareCardImage';
 import { AnimatedModal } from '@/components/AnimatedModal';
+import { hasCompleteProfile, refreshWxProfile } from '@/utils/wxProfile';
 const TIMELINESS_VALUES: Array<'underway' | 'finished'> = ['underway', 'finished'];
 
 function showApiError(e: unknown, fallback: string) {
@@ -42,7 +43,9 @@ export default function ShopActivityPage() {
   const [detail, setDetail] = useState<API.ShopDetailItemResponse | null>(null);
   const [showJoin, setShowJoin] = useState(false);
   const [showSharePoster, setShowSharePoster] = useState(false);
-  const [joinForm, setJoinForm] = useState({ name: '', phone: '' });  const [gridSize, setGridSize] = useState(686);
+  const [joinForm, setJoinForm] = useState({ name: '', phone: '' });
+  const [wxJoinMode, setWxJoinMode] = useState(false);
+  const [gridSize, setGridSize] = useState(686);
   const shareCardPathRef = useRef('');
 
   useEffect(() => {
@@ -139,17 +142,40 @@ export default function ShopActivityPage() {
     return Math.max(0, limit - joined);
   }, [detail]);
 
+  const openJoinModal = async () => {
+    try {
+      const profile = await refreshWxProfile();
+      if (hasCompleteProfile(profile)) {
+        setWxJoinMode(true);
+        setJoinForm({ name: profile!.nickName, phone: profile!.phone });
+        setShowJoin(true);
+        return;
+      }
+      showError('请先在「我的」完善微信昵称与手机号后再报名');
+    } catch {
+      setWxJoinMode(false);
+      setJoinForm({ name: '', phone: '' });
+      setShowJoin(true);
+    }
+  };
+
   const onJoin = async () => {
-    const nameErr = judgeName(joinForm.name);
-    const phoneErr = judgePhone(joinForm.phone);
-    if (nameErr !== true) return showError(String(nameErr));
-    if (phoneErr !== true) return showError(String(phoneErr));
+    if (wxJoinMode) {
+      if (!joinForm.name || !joinForm.phone) {
+        return showError('请先在「我的」完善微信资料与手机号');
+      }
+    } else {
+      const nameErr = judgeName(joinForm.name);
+      const phoneErr = judgePhone(joinForm.phone);
+      if (nameErr !== true) return showError(String(nameErr));
+      if (phoneErr !== true) return showError(String(phoneErr));
+    }
     if (!detail) return;
     try {
       const res = await joinShopActivity({
         activityId: detail._id,
-        name: joinForm.name,
-        phone: joinForm.phone,
+        name: wxJoinMode ? undefined : joinForm.name,
+        phone: wxJoinMode ? undefined : joinForm.phone,
         deviceId: getOrCreateDeviceId(),
       });
       if (res.ok) {
@@ -164,7 +190,7 @@ export default function ShopActivityPage() {
 
   if (shopId && detail) {
     const images = (detail.imgUrl || []).map((item) => toAssetUrl(item));
-    const storeInfo = getStoreByShop(detail.shop);
+    const storeList = getShowStoreAddressDetailSync(detail.shop);
     const active = isTimestampFuture(detail.time);
 
     return (
@@ -222,9 +248,11 @@ export default function ShopActivityPage() {
             )}
           </View>
 
-          {storeInfo && (
+          {storeList.length > 0 && (
             <View className="activity-shop-index-storeSection">
-              <StoreAddressCard info={storeInfo} />
+              {storeList.map((info) => (
+                <StoreAddressCard key={info.shop} info={info} />
+              ))}
             </View>
           )}
         </View>
@@ -232,7 +260,7 @@ export default function ShopActivityPage() {
         <View className="activity-shop-index-detailFooter">
           <ShareActionButton onClick={() => setShowSharePoster(true)} />
           {active && (
-            <Button className="activity-shop-index-joinBtn button-primary footer-action-btn" type="primary" hoverClass="none" onClick={() => setShowJoin(true)}>
+            <Button className="activity-shop-index-joinBtn button-primary footer-action-btn" type="primary" hoverClass="none" onClick={openJoinModal}>
               参与活动
             </Button>
           )}
@@ -263,8 +291,18 @@ export default function ShopActivityPage() {
           bodyClassName="activity-shop-index-modalBody"
         >
           <Text className="activity-shop-index-modalTitle">参与活动</Text>
-          <Input className="form-input" placeholder="姓名或昵称" value={joinForm.name} onInput={(e) => setJoinForm({ ...joinForm, name: e.detail.value })} />
-          <Input className="form-input" placeholder="手机号" type="number" value={joinForm.phone} onInput={(e) => setJoinForm({ ...joinForm, phone: e.detail.value })} />
+          {wxJoinMode ? (
+            <>
+              <Text className="form-input" style={{ opacity: 0.85 }}>{joinForm.name}</Text>
+              <Text className="form-input" style={{ opacity: 0.85 }}>{joinForm.phone}</Text>
+              <Text className="share-poster-remark">已使用微信资料报名</Text>
+            </>
+          ) : (
+            <>
+              <Input className="form-input" placeholder="姓名或昵称" value={joinForm.name} onInput={(e) => setJoinForm({ ...joinForm, name: e.detail.value })} />
+              <Input className="form-input" placeholder="手机号" type="number" value={joinForm.phone} onInput={(e) => setJoinForm({ ...joinForm, phone: e.detail.value })} />
+            </>
+          )}
           <View className="activity-shop-index-modalActions">
             <Button size="mini" onClick={() => setShowJoin(false)}>取消</Button>
             <Button size="mini" type="primary" className="button-primary" onClick={onJoin}>提交</Button>

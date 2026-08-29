@@ -28,3 +28,20 @@ export function joinShopActivity(data: ShopActiveFormParamsProps) {
     data,
   });
 }
+
+export function fetchMyShopJoins() {
+  return NetWorkApi<{
+    ok: boolean;
+    reason?: string;
+    data: Array<{
+      joinId: string;
+      name: string;
+      phone: string;
+      isCheck: boolean;
+      activity: API.ShopListItemResponse | null;
+    }>;
+  }>({
+    method: 'get',
+    url: 'shop/my/joins',
+  });
+}

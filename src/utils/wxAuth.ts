@@ -63,11 +63,15 @@ export async function wxLogin(force = false): Promise<string> {
       throw new Error('微信登录失败');
     }
     const res = await loginWithCode(code);
-    if (!res.ok || !res.data?.openid || !res.data?.token) {
+    // 兼容 data 包装与历史顶层 token/openid
+    const flat = res as WxLoginResponse & { token?: string; openid?: string };
+    const token = res.data?.token || flat.token;
+    const openid = res.data?.openid || flat.openid;
+    if (!res.ok || !token || !openid) {
       throw new Error(res.reason || '微信登录失败');
     }
-    saveWxSession(res.data.token, res.data.openid);
-    return res.data.openid;
+    saveWxSession(token, openid);
+    return openid;
   })();
 
   try {

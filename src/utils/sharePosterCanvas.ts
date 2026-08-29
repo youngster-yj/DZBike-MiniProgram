@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro';
 import qrcode from 'qrcode-generator';
+import { toAssetUrl } from '@/utils/assetUrl';
 
 export const POSTER_WIDTH = 600;
 const PADDING = 24;
@@ -227,21 +228,128 @@ export function computePosterLayout(
   };
 }
 
-async function resolveImagePath(src: string): Promise<string> {
-  if (!src) return '';
+async function downloadRemoteImage(url: string): Promise<string> {
+  const res = await Taro.downloadFile({ url });
+  if (res.statusCode >= 200 && res.statusCode < 300 && res.tempFilePath) {
+    return res.tempFilePath;
+  }
+  throw new Error('图片下载失败');
+}
+
+/** Resolve local/package or remote image to a path OffscreenCanvas createImage can load. */
+export async function resolveImagePath(src: string): Promise<string> {
+  if (!src) throw new Error('图片地址为空');
+
   if (/^https?:\/\//i.test(src)) {
-    const res = await Taro.downloadFile({ url: src });
-    if (res.statusCode >= 200 && res.statusCode < 300 && res.tempFilePath) {
-      return res.tempFilePath;
+    return downloadRemoteImage(src);
+  }
+
+  const candidates = Array.from(
+    new Set(
+      [src, src.replace(/^\//, ''), src.startsWith('/') ? src : `/${src}`].filter(Boolean),
+    ),
+  );
+
+  for (const candidate of candidates) {
+    try {
+      const info = await Taro.getImageInfo({ src: candidate });
+      if (info.path) return info.path;
+    } catch {
+      // try next variant
     }
-    throw new Error('图片下载失败');
   }
+
   try {
-    const info = await Taro.getImageInfo({ src });
-    return info.path || src;
+    return await downloadRemoteImage(toAssetUrl(src));
   } catch {
-    return src;
+    throw new Error('本地图片加载失败');
   }
+}
+
+const LOAD_IMAGE_TIMEOUT_MS = 3000;
+
+function guessImageMime(filePath: string): string {
+  if (/\.jpe?g($|\?)/i.test(filePath)) return 'image/jpeg';
+  if (/\.webp($|\?)/i.test(filePath)) return 'image/webp';
+  return 'image/png';
+}
+
+async function readFileAsDataUrl(filePath: string): Promise<string> {
+  const data = await new Promise<string>((resolve, reject) => {
+    Taro.getFileSystemManager().readFile({
+      filePath,
+      encoding: 'base64',
+      success: (res) => resolve(String(res.data)),
+      fail: reject,
+    });
+  });
+  return `data:${guessImageMime(filePath)};base64,${data}`;
+}
+
+function assignImageSrc(image: Image, src: string, timeoutMs = LOAD_IMAGE_TIMEOUT_MS): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('image load timeout')), timeoutMs);
+    image.onload = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    image.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error('image load error'));
+    };
+    image.src = src;
+  });
+}
+
+/** Load image for OffscreenCanvas; falls back to package-file base64 when createImage fails. */
+export async function loadCanvasImage(canvas: Taro.Canvas, src: string): Promise<Image | null> {
+  if (!src) return null;
+
+  let resolved = src;
+  try {
+    resolved = await resolveImagePath(src);
+  } catch {
+    resolved = src;
+  }
+
+  const tryCreate = async (url: string) => {
+    const image = canvas.createImage();
+    await assignImageSrc(image, url);
+    return image;
+  };
+
+  try {
+    const direct =
+      /^https?:\/\//i.test(resolved) && !/[?&]t=/.test(resolved)
+        ? `${resolved}${resolved.includes('?') ? '&' : '?'}t=${Date.now()}`
+        : resolved;
+    return await tryCreate(direct);
+  } catch {
+    // package / local path: read as base64 (WeChat OffscreenCanvas workaround)
+  }
+
+  const readCandidates = Array.from(
+    new Set(
+      [
+        resolved,
+        src,
+        src.replace(/^\//, ''),
+        src.startsWith('/') ? src : `/${src.replace(/^\//, '')}`,
+      ].filter(Boolean),
+    ),
+  );
+
+  for (const candidate of readCandidates) {
+    if (/^https?:\/\//i.test(candidate) || candidate.startsWith('data:')) continue;
+    try {
+      const dataUrl = await readFileAsDataUrl(candidate);
+      return await tryCreate(dataUrl);
+    } catch {
+      // try next
+    }
+  }
+
+  return null;
 }
 
 async function preloadPosterImage(payload: SharePosterPayloadInput): Promise<PosterImageMeta | null> {
@@ -251,22 +359,6 @@ async function preloadPosterImage(payload: SharePosterPayloadInput): Promise<Pos
     const path = await resolveImagePath(src);
     const info = await Taro.getImageInfo({ src: path });
     return { width: info.width, height: info.height };
-  } catch {
-    return null;
-  }
-}
-
-async function loadCanvasImage(canvas: Taro.Canvas, src: string): Promise<Image | null> {
-  if (!src) return null;
-  try {
-    const path = await resolveImagePath(src);
-    const image = canvas.createImage();
-    await new Promise<void>((resolve, reject) => {
-      image.onload = () => resolve();
-      image.onerror = reject;
-      image.src = path;
-    });
-    return image;
   } catch {
     return null;
   }

@@ -1,5 +1,5 @@
 import Taro from '@tarojs/taro';
-import { fitImageRect } from '@/utils/sharePosterCanvas';
+import { fitImageRect, loadCanvasImage } from '@/utils/sharePosterCanvas';
 
 /** WeChat share card display ratio is 5:4 */
 const SHARE_CARD_WIDTH = 500;
@@ -26,39 +26,6 @@ function createOffscreenCanvas(width: number, height: number): Taro.Canvas {
     throw new Error('当前微信版本不支持分享图生成');
   }
   return wxApi.createOffscreenCanvas({ type: '2d', width, height }) as Taro.Canvas;
-}
-
-async function resolveImagePath(src: string): Promise<string> {
-  if (!src) return '';
-  if (/^https?:\/\//i.test(src)) {
-    const res = await Taro.downloadFile({ url: src });
-    if (res.statusCode >= 200 && res.statusCode < 300 && res.tempFilePath) {
-      return res.tempFilePath;
-    }
-    throw new Error('图片下载失败');
-  }
-  try {
-    const info = await Taro.getImageInfo({ src });
-    return info.path || src;
-  } catch {
-    return src;
-  }
-}
-
-async function loadCanvasImage(canvas: Taro.Canvas, src: string): Promise<Image | null> {
-  if (!src) return null;
-  try {
-    const path = await resolveImagePath(src);
-    const image = canvas.createImage();
-    await new Promise<void>((resolve, reject) => {
-      image.onload = () => resolve();
-      image.onerror = reject;
-      image.src = path;
-    });
-    return image;
-  } catch {
-    return null;
-  }
 }
 
 async function getFileSize(filePath: string): Promise<number> {

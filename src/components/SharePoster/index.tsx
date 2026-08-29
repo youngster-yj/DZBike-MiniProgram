@@ -57,27 +57,30 @@ export function SharePosterModal({ visible, payload, onClose, onShareImageReady 
 
     const runGenerate = async () => {
       const coverSrc = getShareCoverSrc(payload);
-      const posterPromise = Promise.race([
-        generateSharePosterImage(payload),
-        new Promise<string>((_, reject) => {
-          setTimeout(() => reject(new Error('海报生成超时，请重试')), GENERATE_TIMEOUT_MS);
-        }),
-      ]);
-      const thumbPromise = coverSrc
-        ? ensureShareCardImage(coverSrc)
-        : Promise.resolve<string | null>(null);
-
       try {
-        setThumbPreparing(Boolean(coverSrc));
-        const [tempFilePath, shareThumb] = await Promise.all([posterPromise, thumbPromise]);
+        const tempFilePath = await Promise.race([
+          generateSharePosterImage(payload),
+          new Promise<string>((_, reject) => {
+            setTimeout(() => reject(new Error('海报生成超时，请重试')), GENERATE_TIMEOUT_MS);
+          }),
+        ]);
         if (cancelledRef.current) return;
         setPreviewUrl(tempFilePath);
-        if (shareThumb) {
-          setShareThumbUrl(shareThumb);
-          onShareImageReadyRef.current?.(shareThumb);
-        } else if (coverSrc) {
-          setThumbError('分享图生成失败，请重试');
+        setRendering(false);
+
+        if (!coverSrc) {
+          // no cover: still allow share with poster image
+          setShareThumbUrl(tempFilePath);
+          onShareImageReadyRef.current?.(tempFilePath);
+          return;
         }
+        setThumbPreparing(true);
+        const shareThumb = await ensureShareCardImage(coverSrc);
+        if (cancelledRef.current) return;
+        const thumb = shareThumb || tempFilePath;
+        setShareThumbUrl(thumb);
+        onShareImageReadyRef.current?.(thumb);
+        // thumb 失败时用海报兜底，不再提示「分享图生成失败」
       } catch (error) {
         if (cancelledRef.current) return;
         setRenderError(error instanceof Error ? error.message : '海报生成失败');

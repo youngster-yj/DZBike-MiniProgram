@@ -107,8 +107,10 @@ export default function HomePage() {
                   <View className="home-index-carouselGradientTop" />
                   <View className="home-index-carouselGradientBottom" />
                   <View className="home-index-carouselText">
-                    <Text className="home-index-carouselTitle">{item.title}</Text>
-                    <Text className="home-index-carouselSub">{item.subTitle}</Text>
+                    <View className="home-index-carouselCaption">
+                      <Text className="home-index-carouselTitle">{item.title}</Text>
+                      <Text className="home-index-carouselSub">{item.subTitle}</Text>
+                    </View>
                   </View>
                 </View>
               </SwiperItem>
