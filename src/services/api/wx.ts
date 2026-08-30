@@ -1,11 +1,18 @@
 import { NetWorkApi } from '@/services/request';
 import { WxProfileData } from '@/services/types';
 
-export function recordSubscribeTemplates(tmplIds: string[]) {
+export function recordSubscribeTemplates(
+  tmplIds: string[],
+  extra?: { activityId?: string; kind?: 'bike' | 'shop' },
+) {
   return NetWorkApi<{ ok: boolean; reason?: string }>({
     method: 'post',
     url: 'wx/subscribe/record',
-    data: { tmplIds },
+    data: {
+      tmplIds,
+      ...(extra?.activityId ? { activityId: extra.activityId } : {}),
+      ...(extra?.kind ? { kind: extra.kind } : {}),
+    },
   });
 }
 

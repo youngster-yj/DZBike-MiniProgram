@@ -24,7 +24,7 @@ import { FormDateTimePicker, buildTimestamp } from '@/components/FormDateTimePic
 import { formatDateTime, isTimestampFuture, maskName, maskPhone } from '@/utils/timeUtil';
 import { judgeName, judgePhone, showSuccess, showError, makePhoneCall } from '@/utils/helpers';
 import { ApiError } from '@/services/request';
-import { requestActivityAuditSubscribe } from '@/utils/wxSubscribe';
+import { requestActivityAuditSubscribe, requestJoinRemindSubscribe, recordJoinRemindSubscribe } from '@/utils/wxSubscribe';
 import officialBg from '@/assets/activity/official.png';
 import personalBg from '@/assets/activity/personal.png';
 import { Phone } from '@nutui/icons-react-taro';
@@ -361,7 +361,7 @@ export default function BikeActivityPage() {
     }
     if (!detail) return;
     try {
-      await requestActivityAuditSubscribe();
+      const acceptedRemind = await requestJoinRemindSubscribe('bike');
       const res = await joinActivity({
         activityId: detail._id,
         name: wxJoinMode ? undefined : joinForm.name,
@@ -369,6 +369,13 @@ export default function BikeActivityPage() {
         key: wxJoinMode ? undefined : joinForm.key,
       });
       if (res.ok) {
+        if (acceptedRemind.length) {
+          await recordJoinRemindSubscribe({
+            kind: 'bike',
+            activityId: detail._id,
+            tmplIds: acceptedRemind,
+          });
+        }
         showSuccess('报名成功');
         setShowJoin(false);
         loadDetail(detail._id);

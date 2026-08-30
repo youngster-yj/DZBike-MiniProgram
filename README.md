@@ -110,8 +110,11 @@ npm run build:weapp:prod
 |------|------|------|
 | `TARO_APP_API_BASE` | `http://localhost:3001/dz-bike/` | `https://dzbike.club/dz-bike/` |
 | `TARO_APP_ASSET_BASE` | `http://localhost:3001/` | `https://dzbike.club/` |
+| `TARO_APP_WX_SUBSCRIBE_ACTIVITY_AUDIT` | 审核结果模板 ID（可空） | 同左 |
+| `TARO_APP_WX_SUBSCRIBE_BIKE_REMIND` | 骑行开始前提醒模板 ID | 同左 |
+| `TARO_APP_WX_SUBSCRIBE_SHOP_REMIND` | 店铺截止前提醒模板 ID | 同左 |
 
-配置位于 `config/dev.ts` 和 `config/prod.ts`。
+配置位于 `config/dev.ts` 和 `config/prod.ts`。提醒模板为「活动预约提醒」：`thing2` / `thing4` / `time8`；服务端对应 `WX_SUBSCRIBE_TEMPLATE_*`。
 
 ## 项目结构
 

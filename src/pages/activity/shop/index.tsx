@@ -25,6 +25,7 @@ import { ensureShareCardImage, getShareCardImage } from '@/utils/shareCardImage'
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { hasWxIdentity, refreshWxProfile } from '@/utils/wxProfile';
 import { WxAuthModal } from '@/components/WxAuthModal';
+import { requestJoinRemindSubscribe, recordJoinRemindSubscribe } from '@/utils/wxSubscribe';
 const TIMELINESS_VALUES: Array<'underway' | 'finished'> = ['underway', 'finished'];
 
 function showApiError(e: unknown, fallback: string) {
@@ -179,6 +180,7 @@ export default function ShopActivityPage() {
     }
     if (!detail) return;
     try {
+      const acceptedRemind = await requestJoinRemindSubscribe('shop');
       const res = await joinShopActivity({
         activityId: detail._id,
         name: wxJoinMode ? undefined : joinForm.name,
@@ -186,6 +188,13 @@ export default function ShopActivityPage() {
         deviceId: getOrCreateDeviceId(),
       });
       if (res.ok) {
+        if (acceptedRemind.length) {
+          await recordJoinRemindSubscribe({
+            kind: 'shop',
+            activityId: detail._id,
+            tmplIds: acceptedRemind,
+          });
+        }
         showSuccess(res.reason || '报名成功');
         setShowJoin(false);
         loadDetail(detail._id);
