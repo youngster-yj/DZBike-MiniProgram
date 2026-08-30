@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { MenuItemProps } from '@/data/navConfig';
 import shopIcon from '@/assets/menu/shop.png';
 import giftIcon from '@/assets/menu/gift.png';
-import shoppingIcon from '@/assets/menu/shopping.png';
+import brandsIcon from '@/assets/menu/brands.png';
+import equipIcon from '@/assets/menu/equip.png';
 import cameraIcon from '@/assets/menu/camera.png';
 import lightningIcon from '@/assets/menu/lightning.png';
 import arrowRightIcon from '@/assets/menu/arrow-right.png';
@@ -22,8 +23,9 @@ function getIconSrc(item: MenuItemProps, variant: 'goods' | 'activity') {
     if (item.key === 'collect') return cameraIcon;
     return lightningIcon;
   }
+  if (item.key === 'sub-brands') return brandsIcon;
+  if (item.key === 'equip') return equipIcon;
   if (item.key === 'babyBike') return giftIcon;
-  if (item.key === 'equip') return shoppingIcon;
   return shopIcon;
 }
 

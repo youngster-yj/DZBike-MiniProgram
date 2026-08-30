@@ -7,7 +7,7 @@ import { AnimatedModal } from '@/components/AnimatedModal';
 import { judgeName, judgePhone, showSuccess, showError } from '@/utils/helpers';
 import { getOrCreateDeviceId } from '@/utils/deviceId';
 import { usePlatformConfigVersion } from '@/store/platformConfigStore';
-import { hasCompleteProfile, refreshWxProfile } from '@/utils/wxProfile';
+import { hasWxIdentity, refreshWxProfile } from '@/utils/wxProfile';
 
 
 export default function ComplaintPage() {
@@ -34,7 +34,7 @@ export default function ComplaintPage() {
   const openForm = async () => {
     try {
       const profile = await refreshWxProfile();
-      if (hasCompleteProfile(profile)) {
+      if (hasWxIdentity(profile)) {
         setForm((f) => ({
           ...f,
           name: profile!.nickName,

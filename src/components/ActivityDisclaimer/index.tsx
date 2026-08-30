@@ -30,12 +30,12 @@ export function ActivityDisclaimer({ visible, onClose, onAgree }: ActivityDiscla
           <Text className="activity-bike-index-disclaimerText">
             3. 为防止无关人员报名,报名者报名时需输入活动创建者
             <Text className="activity-bike-index-disclaimerEm">口令</Text>
-            (二维码扫码会自动带入口令)
+            (二维码扫码及小程序登录后会自动带入口令)
           </Text>
           <Text className="activity-bike-index-disclaimerText">
-            4. 除<Text className="activity-bike-index-disclaimerEm">瑞豹</Text>达州总代与
-            <Text className="activity-bike-index-disclaimerEm">喜德盛</Text>
-            龙郡外滩达州旗舰店发布的官方活动外,第三方活动创建者需等待审核(可首页联系店铺加速通过)
+            4. 除<Text className="activity-bike-index-disclaimerEm">喜德盛</Text>龙郡外滩达州旗舰店等
+            <Text className="activity-bike-index-disclaimerEm">官方直营</Text>
+            店铺的官方活动外,第三方活动创建者需等待审核(可首页联系店铺加速通过)
           </Text>
           <Text className="activity-bike-index-disclaimerText">
             5. 活动自愿参加，安全责任自负，夜骑必备头盔手套，前后灯。请严格遵守交通规则

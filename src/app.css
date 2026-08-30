@@ -219,6 +219,19 @@ button[size='mini'][type='primary'] {
   color: #475569;
 }
 
+.form-input--withHint {
+  margin-bottom: 8px;
+}
+
+.form-field-hint {
+  display: block;
+  font-size: 24px;
+  color: #94a3b8;
+  margin-top: 0;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
 /* components/ActivityItem/ActivityItem.module.css */
 .ActivityItem-ActivityItem-card {
   position: relative;
@@ -739,7 +752,6 @@ button[size='mini'][type='primary'] {
 /* pages/activity/bike/index.module.css */
 .activity-bike-index-page {
   padding: 24px;
-  min-height: 100vh;
 }
 
 .activity-bike-index-toolbar {
@@ -1231,7 +1243,6 @@ button[size='mini'][type='primary'] {
 /* pages/activity/collect/index.module.css */
 .activity-collect-index-page {
   padding: 16px;
-  min-height: 100vh;
   background: #f1f5f9;
 }
 
@@ -1324,7 +1335,6 @@ button[size='mini'][type='primary'] {
 
 /* pages/activity/menu/index.module.css */
 .activity-menu-index-page {
-  min-height: 100vh;
   background: #f1f5f9;
   padding: 0;
 }
@@ -1333,7 +1343,6 @@ button[size='mini'][type='primary'] {
 /* pages/activity/shop/index.module.css */
 .activity-shop-index-page {
   padding: 24px;
-  min-height: 100vh;
   background: #f1f5f9;
 }
 
@@ -1342,7 +1351,6 @@ button[size='mini'][type='primary'] {
 }
 
 .activity-shop-index-detailPage {
-  min-height: 100vh;
   background: #f1f5f9;
   padding-bottom: calc(120rpx + env(safe-area-inset-bottom, 0px));
 }
@@ -1559,7 +1567,6 @@ button[size='mini'][type='primary'] {
 
 /* pages/complaint/index.module.css */
 .complaint-index-page {
-  min-height: 100vh;
   background: #f1f5f9;
   padding-bottom: calc(46rpx + env(safe-area-inset-bottom, 0px));
 }
@@ -1941,7 +1948,6 @@ button[size='mini'][type='primary'] {
 
 /* pages/store/detail/index.module.css */
 .store-detail-index-page {
-  min-height: 100vh;
   background: #f0f1f3;
   padding-bottom: 32px;
 }
@@ -2098,7 +2104,6 @@ button[size='mini'][type='primary'] {
 
 /* pages/store/list/index.module.css */
 .store-list-index-page {
-  min-height: 100vh;
   padding-bottom: 24px;
   background: #f0f1f3;
 }
@@ -2169,7 +2174,6 @@ button[size='mini'][type='primary'] {
 
 /* pages/store/menu/index.module.css */
 .store-menu-index-page {
-  min-height: 100vh;
   background: #f1f5f9;
   padding: 0;
 }
@@ -2197,11 +2201,11 @@ button[size='mini'][type='primary'] {
 }
 
 .MobileMenuList-MobileMenuList-rowExpandable {
-  border-left: 6px solid transparent;
+  align-items: center;
 }
 
 .MobileMenuList-MobileMenuList-rowExpanded {
-  border-left-color: #3182ce;
+  box-shadow: inset 6px 0 0 #3182ce;
   background: #eff6ff;
 }
 
@@ -2248,6 +2252,9 @@ button[size='mini'][type='primary'] {
 .MobileMenuList-MobileMenuList-text {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .MobileMenuList-MobileMenuList-label {
@@ -2255,6 +2262,7 @@ button[size='mini'][type='primary'] {
   font-size: 30px;
   font-weight: 600;
   color: #1e293b;
+  line-height: 1.35;
 }
 
 .MobileMenuList-MobileMenuList-desc {
@@ -2262,6 +2270,7 @@ button[size='mini'][type='primary'] {
   font-size: 24px;
   color: #94a3b8;
   margin-top: 4px;
+  line-height: 1.35;
 }
 
 .MobileMenuList-MobileMenuList-trailing {
@@ -2269,6 +2278,7 @@ button[size='mini'][type='primary'] {
   display: flex;
   flex-direction: row;
   align-items: center;
+  align-self: center;
   gap: 8px;
 }
 
@@ -2336,6 +2346,8 @@ button[size='mini'][type='primary'] {
   height: 100%;
   width: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .ImagesGridBox-ImagesGridBox-column {
@@ -2352,6 +2364,7 @@ button[size='mini'][type='primary'] {
 
 .ImagesGridBox-ImagesGridBox-flex {
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -2504,7 +2517,6 @@ button[size='mini'][type='primary'] {
 }
 /* ???? Mine ???? */
 .mine-index-page {
-  min-height: 100vh;
   padding: 24px 24px 48px;
   box-sizing: border-box;
   background: #f1f5f9;
@@ -2783,7 +2795,6 @@ button[size='mini'][type='primary'] {
 
 .mine-joins-page,
 .mine-favorites-page {
-  min-height: 100vh;
   background: #f1f5f9;
   padding-bottom: 32px;
 }

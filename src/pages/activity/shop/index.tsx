@@ -14,7 +14,7 @@ import { StoreAddressCard } from '@/components/StoreAddressCard';
 import { ImagesGridBox } from '@/components/ImagesGridBox';
 import { toAssetUrl } from '@/utils/assetUrl';
 import { getShowStoreAddressDetailSync } from '@/services/platformConfig';
-import { formatDateTime, isTimestampFuture } from '@/utils/timeUtil';
+import { formatDateTime, isTimestampFuture, maskName, maskPhone } from '@/utils/timeUtil';
 import { judgeName, judgePhone, showSuccess, showError } from '@/utils/helpers';
 import { getOrCreateDeviceId } from '@/utils/deviceId';
 import { ApiError } from '@/services/request';
@@ -23,7 +23,8 @@ import { ShareActionButton } from '@/components/ShareActionButton';
 import { buildShopH5Url, buildShopMiniPath } from '@/utils/shareUrl';
 import { ensureShareCardImage, getShareCardImage } from '@/utils/shareCardImage';
 import { AnimatedModal } from '@/components/AnimatedModal';
-import { hasCompleteProfile, refreshWxProfile } from '@/utils/wxProfile';
+import { hasWxIdentity, refreshWxProfile } from '@/utils/wxProfile';
+import { WxAuthModal } from '@/components/WxAuthModal';
 const TIMELINESS_VALUES: Array<'underway' | 'finished'> = ['underway', 'finished'];
 
 function showApiError(e: unknown, fallback: string) {
@@ -42,6 +43,7 @@ export default function ShopActivityPage() {
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<API.ShopDetailItemResponse | null>(null);
   const [showJoin, setShowJoin] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSharePoster, setShowSharePoster] = useState(false);
   const [joinForm, setJoinForm] = useState({ name: '', phone: '' });
   const [wxJoinMode, setWxJoinMode] = useState(false);
@@ -142,16 +144,20 @@ export default function ShopActivityPage() {
     return Math.max(0, limit - joined);
   }, [detail]);
 
+  const openJoinWithProfile = (profile: { nickName: string; phone: string }) => {
+    setWxJoinMode(true);
+    setJoinForm({ name: profile.nickName, phone: profile.phone });
+    setShowJoin(true);
+  };
+
   const openJoinModal = async () => {
     try {
       const profile = await refreshWxProfile();
-      if (hasCompleteProfile(profile)) {
-        setWxJoinMode(true);
-        setJoinForm({ name: profile!.nickName, phone: profile!.phone });
-        setShowJoin(true);
+      if (hasWxIdentity(profile)) {
+        openJoinWithProfile(profile!);
         return;
       }
-      showError('请先在「我的」完善微信昵称与手机号后再报名');
+      setShowAuthModal(true);
     } catch {
       setWxJoinMode(false);
       setJoinForm({ name: '', phone: '' });
@@ -162,7 +168,8 @@ export default function ShopActivityPage() {
   const onJoin = async () => {
     if (wxJoinMode) {
       if (!joinForm.name || !joinForm.phone) {
-        return showError('请先在「我的」完善微信资料与手机号');
+        setShowAuthModal(true);
+        return;
       }
     } else {
       const nameErr = judgeName(joinForm.name);
@@ -235,8 +242,8 @@ export default function ShopActivityPage() {
               <View className="activity-shop-index-participantList">
                 {(detail.joinData || []).map((item) => (
                   <View key={item._id} className="activity-shop-index-participantRow">
-                    <Text className="activity-shop-index-participantName">{item.name}</Text>
-                    <Text className="activity-shop-index-participantPhone">{item.phone}</Text>
+                    <Text className="activity-shop-index-participantName">{maskName(item.name)}</Text>
+                    <Text className="activity-shop-index-participantPhone">{maskPhone(item.phone)}</Text>
                     <Text className={`activity-shop-index-participantTag${item.isCheck ? ' activity-shop-index-participantTagDone' : ''}`}>
                       {item.isCheck ? '已到店' : '等待到店'}
                     </Text>
@@ -308,6 +315,12 @@ export default function ShopActivityPage() {
             <Button size="mini" type="primary" className="button-primary" onClick={onJoin}>提交</Button>
           </View>
         </AnimatedModal>
+
+        <WxAuthModal
+          visible={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={(profile) => openJoinWithProfile(profile)}
+        />
       </View>
     );
   }

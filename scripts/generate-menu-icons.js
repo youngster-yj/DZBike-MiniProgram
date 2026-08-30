@@ -1,19 +1,21 @@
 /**
- * 生成菜单列表 PNG 图标（48×48，#3182ce 描边风格）。
+ * 生成商品菜单区分图标（与 tabbar 同款线框 + #3182ce）。
+ * brands.png：九宫格；equip.png：头盔轮廓。
  */
 const fs = require('fs');
 const path = require('path');
 const { PNG } = require('pngjs');
 
-const SIZE = 48;
+const SIZE = 81;
 const dir = path.join(__dirname, '..', 'src', 'assets', 'menu');
 const COLOR = { r: 49, g: 130, b: 206, a: 255 };
-const MUTED = { r: 148, g: 163, b: 184, a: 255 };
-const T = 3;
+const T = 4;
 
 function createCanvas() {
   const png = new PNG({ width: SIZE, height: SIZE });
-  for (let i = 0; i < png.data.length; i += 4) png.data[i + 3] = 0;
+  for (let i = 0; i < png.data.length; i += 4) {
+    png.data[i + 3] = 0;
+  }
   return png;
 }
 
@@ -28,7 +30,9 @@ function setPixel(png, x, y, color) {
 
 function fillRect(png, x0, y0, w, h, color) {
   for (let y = y0; y < y0 + h; y++) {
-    for (let x = x0; x < x0 + w; x++) setPixel(png, x, y, color);
+    for (let x = x0; x < x0 + w; x++) {
+      setPixel(png, x, y, color);
+    }
   }
 }
 
@@ -48,70 +52,49 @@ function drawLine(png, x0, y0, x1, y1, t, color) {
   }
 }
 
-function drawShop(png, color) {
-  strokeRect(png, 10, 18, 28, 22, T, color);
-  drawLine(png, 14, 18, 14, 12, T, color);
-  drawLine(png, 34, 18, 34, 12, T, color);
-  drawLine(png, 14, 12, 34, 12, T, color);
+/** 九宫格：其余品牌大类 */
+function drawBrands(png, color) {
+  const cells = [
+    [18, 18],
+    [34, 18],
+    [50, 18],
+    [18, 34],
+    [34, 34],
+    [50, 34],
+    [18, 50],
+    [34, 50],
+    [50, 50],
+  ];
+  const cell = 12;
+  cells.forEach(([x, y]) => strokeRect(png, x, y, cell, cell, 3, color));
 }
 
-function drawGift(png, color) {
-  strokeRect(png, 12, 20, 24, 18, T, color);
-  drawLine(png, 24, 20, 24, 12, T, color);
-  drawLine(png, 12, 26, 36, 26, T, color);
-  drawLine(png, 18, 12, 24, 18, T, color);
-  drawLine(png, 30, 12, 24, 18, T, color);
+/** 头盔：骑行装备 */
+function drawEquip(png, color) {
+  // dome
+  for (let a = 200; a <= 340; a += 2) {
+    const rad = (a * Math.PI) / 180;
+    const x = Math.round(40 + 22 * Math.cos(rad));
+    const y = Math.round(38 + 20 * Math.sin(rad));
+    fillRect(png, x - 1, y - 1, T, T, color);
+  }
+  // brim / visor line
+  drawLine(png, 18, 42, 62, 42, T, color);
+  // cheek / lower shell
+  drawLine(png, 22, 42, 22, 54, T, color);
+  drawLine(png, 58, 42, 58, 54, T, color);
+  drawLine(png, 22, 54, 58, 54, T, color);
+  // vent
+  drawLine(png, 34, 26, 46, 26, 3, color);
 }
 
-function drawShopping(png, color) {
-  strokeRect(png, 12, 18, 24, 20, T, color);
-  drawLine(png, 16, 18, 16, 12, T, color);
-  drawLine(png, 32, 18, 32, 12, T, color);
-  drawLine(png, 16, 12, 32, 12, T, color);
-}
-
-function drawCamera(png, color) {
-  strokeRect(png, 8, 16, 32, 22, T, color);
-  fillRect(png, 18, 12, 12, 6, color);
-  fillRect(png, 20, 24, 8, 8, { r: 255, g: 255, b: 255, a: 255 });
-}
-
-function drawLightning(png, color) {
-  drawLine(png, 26, 8, 18, 24, T, color);
-  drawLine(png, 18, 24, 24, 24, T, color);
-  drawLine(png, 24, 24, 20, 38, T, color);
-  drawLine(png, 20, 38, 30, 20, T, color);
-  drawLine(png, 30, 20, 24, 20, T, color);
-  drawLine(png, 24, 20, 26, 8, T, color);
-}
-
-function drawArrowRight(png, color) {
-  drawLine(png, 16, 24, 30, 24, T, color);
-  drawLine(png, 24, 18, 30, 24, T, color);
-  drawLine(png, 24, 30, 30, 24, T, color);
-}
-
-function drawArrowDown(png, color) {
-  drawLine(png, 24, 16, 24, 30, T, color);
-  drawLine(png, 18, 24, 24, 30, T, color);
-  drawLine(png, 30, 24, 24, 30, T, color);
-}
-
-const ICONS = {
-  shop: drawShop,
-  gift: drawGift,
-  shopping: drawShopping,
-  camera: drawCamera,
-  lightning: drawLightning,
-  'arrow-right': drawArrowRight,
-  'arrow-down': (png) => drawArrowDown(png, MUTED),
-};
-
-fs.mkdirSync(dir, { recursive: true });
-Object.entries(ICONS).forEach(([name, draw]) => {
+function writeIcon(filename, draw) {
   const png = createCanvas();
   draw(png, COLOR);
-  fs.writeFileSync(path.join(dir, `${name}.png`), PNG.sync.write(png));
-});
+  fs.writeFileSync(path.join(dir, filename), PNG.sync.write(png));
+}
 
-console.log('Menu icons generated.');
+fs.mkdirSync(dir, { recursive: true });
+writeIcon('brands.png', drawBrands);
+writeIcon('equip.png', drawEquip);
+console.log('Menu icons generated: brands.png, equip.png');

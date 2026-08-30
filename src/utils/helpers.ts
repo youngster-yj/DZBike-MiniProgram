@@ -13,11 +13,12 @@ export function showError(title: string) {
   showToast(title, 'none');
 }
 
-/** 仅允许 2–10 位中文姓名/昵称 */
+/** 2–20 位中文/英文/数字及常见分隔符（兼容微信英文/中英昵称） */
 export function judgeName(value: string): string | true {
-  const re = /^[\u4e00-\u9fa5]{2,10}$/;
-  if (re.test(value)) return true;
-  return '请输入正确姓名或昵称';
+  const trimmed = value.trim();
+  const re = /^[\u4e00-\u9fa5a-zA-Z0-9_\- ·・]{2,20}$/;
+  if (re.test(trimmed)) return true;
+  return '请输入 2–20 位昵称（中英文、数字均可）';
 }
 
 export function judgePhone(value: string): string | true {

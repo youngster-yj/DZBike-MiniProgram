@@ -21,7 +21,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { TimelinessToolbar } from '@/components/TimelinessToolbar';
 import { ActivityDisclaimer } from '@/components/ActivityDisclaimer';
 import { FormDateTimePicker, buildTimestamp } from '@/components/FormDateTimePicker';
-import { formatDateTime, isTimestampFuture } from '@/utils/timeUtil';
+import { formatDateTime, isTimestampFuture, maskName, maskPhone } from '@/utils/timeUtil';
 import { judgeName, judgePhone, showSuccess, showError, makePhoneCall } from '@/utils/helpers';
 import { ApiError } from '@/services/request';
 import { requestActivityAuditSubscribe } from '@/utils/wxSubscribe';
@@ -34,7 +34,8 @@ import { ShareActionButton } from '@/components/ShareActionButton';
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { buildBikeH5Url, buildBikeMiniPath } from '@/utils/shareUrl';
 import { ensureShareCardImage, getShareCardImage } from '@/utils/shareCardImage';
-import { hasCompleteProfile, hasWxIdentity, refreshWxProfile } from '@/utils/wxProfile';
+import { hasWxIdentity, refreshWxProfile } from '@/utils/wxProfile';
+import { WxAuthModal } from '@/components/WxAuthModal';
 import { getVisibleStoreAddressDetailSync, getShopDisplayNameSync } from '@/services/platformConfig';
 
 /** 分享/Canvas 用包内固定路径（与 copy 到 dist/assets 一致） */
@@ -84,6 +85,7 @@ export default function BikeActivityPage() {
   const [showApply, setShowApply] = useState(false);
 
   const [showJoin, setShowJoin] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const [showJoinList, setShowJoinList] = useState(false);
 
@@ -319,20 +321,24 @@ export default function BikeActivityPage() {
     }
   };
 
+  const openJoinWithProfile = (profile: { nickName: string; phone: string }) => {
+    setWxJoinMode(true);
+    setJoinForm({
+      name: profile.nickName,
+      phone: profile.phone,
+      key: '',
+    });
+    setShowJoin(true);
+  };
+
   const openJoinModal = async () => {
     try {
       const profile = await refreshWxProfile();
-      if (hasCompleteProfile(profile)) {
-        setWxJoinMode(true);
-        setJoinForm({
-          name: profile!.nickName,
-          phone: profile!.phone,
-          key: '',
-        });
-        setShowJoin(true);
+      if (hasWxIdentity(profile)) {
+        openJoinWithProfile(profile!);
         return;
       }
-      showError('请先在「我的」完善微信昵称与手机号后再报名');
+      setShowAuthModal(true);
     } catch {
       setWxJoinMode(false);
       setJoinForm({ name: '', phone: '', key: '' });
@@ -343,7 +349,8 @@ export default function BikeActivityPage() {
   const onJoin = async () => {
     if (wxJoinMode) {
       if (!joinForm.name || !joinForm.phone) {
-        return showError('请先在「我的」完善微信资料与手机号');
+        setShowAuthModal(true);
+        return;
       }
     } else {
       const nameErr = judgeName(joinForm.name);
@@ -669,9 +676,9 @@ export default function BikeActivityPage() {
 
                   <View key={item._id} className="activity-bike-index-participantRow">
 
-                    <Text className="activity-bike-index-participantName">{item.name}</Text>
+                    <Text className="activity-bike-index-participantName">{maskName(item.name)}</Text>
 
-                    <Text className="activity-bike-index-participantPhone">{item.phone}</Text>
+                    <Text className="activity-bike-index-participantPhone">{maskPhone(item.phone)}</Text>
 
                     {detail.prize ? (
 
@@ -888,7 +895,7 @@ export default function BikeActivityPage() {
           setShowDisclaimer(false);
           try {
             const profile = await refreshWxProfile();
-            if (hasCompleteProfile(profile)) {
+            if (hasWxIdentity(profile)) {
               setApplyForm((f) => ({
                 ...f,
                 name: profile!.nickName,
@@ -913,7 +920,8 @@ export default function BikeActivityPage() {
         <Input className="form-input" placeholder="电话号" type="number" value={applyForm.phone} onInput={(e) => setApplyForm({ ...applyForm, phone: e.detail.value })} />
         <Input className="form-input" placeholder="活动主题" value={applyForm.title} onInput={(e) => setApplyForm({ ...applyForm, title: e.detail.value })} />
         <Input className="form-input" placeholder="活动简介" value={applyForm.content} onInput={(e) => setApplyForm({ ...applyForm, content: e.detail.value })} />
-        <Input className="form-input" placeholder="活动口令" value={applyForm.key} onInput={(e) => setApplyForm({ ...applyForm, key: e.detail.value })} />
+        <Input className="form-input form-input--withHint" placeholder="活动口令" value={applyForm.key} onInput={(e) => setApplyForm({ ...applyForm, key: e.detail.value })} />
+        <Text className="form-field-hint">用于限制无关人员报名挤占名额，扫码参与会自动带入；分享海报与查发布者电话时也可能需校验此口令</Text>
         <Picker
           mode="selector"
           range={getVisibleStoreAddressDetailSync().map((s) => s.title || s.shop)}
@@ -972,6 +980,12 @@ export default function BikeActivityPage() {
           <Button size="mini" type="primary" className="button-primary" onClick={onApply}>提交</Button>
         </View>
       </AnimatedModal>
+
+      <WxAuthModal
+        visible={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={(profile) => openJoinWithProfile(profile)}
+      />
 
     </View>
 

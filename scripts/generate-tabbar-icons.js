@@ -92,12 +92,23 @@ function drawComplaint(png, color) {
 }
 
 function drawMine(png, color) {
-  // head
-  strokeRect(png, 34, 16, 14, 14, T, color);
-  // shoulders
-  drawLine(png, 22, 52, 40, 36, T, color);
-  drawLine(png, 58, 52, 40, 36, T, color);
-  strokeRect(png, 22, 48, 36, 14, T, color);
+  // circular head
+  const cx = 40;
+  const cy = 26;
+  const r = 10;
+  for (let a = 0; a < 360; a += 2) {
+    const rad = (a * Math.PI) / 180;
+    const x = Math.round(cx + r * Math.cos(rad));
+    const y = Math.round(cy + r * Math.sin(rad));
+    fillRect(png, x - 1, y - 1, T, T, color);
+  }
+  // shoulder arc
+  for (let a = 200; a <= 340; a += 2) {
+    const rad = (a * Math.PI) / 180;
+    const x = Math.round(40 + 22 * Math.cos(rad));
+    const y = Math.round(58 + 16 * Math.sin(rad));
+    fillRect(png, x - 1, y - 1, T, T, color);
+  }
 }
 
 const ICONS = {
