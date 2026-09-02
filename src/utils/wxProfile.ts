@@ -4,7 +4,7 @@ import { WxProfileData } from '@/services/types';
 import { getWxToken, wxLogin } from '@/utils/wxAuth';
 
 const PROFILE_KEY = 'WX_PROFILE';
-const BASE_URL = process.env.TARO_APP_API_BASE || 'https://dzbike.club/dz-bike/';
+const BASE_URL = process.env.TARO_APP_API_BASE || 'https://www.dzbike.club/dz-bike/';
 
 export function getCachedProfile(): WxProfileData | null {
   try {

@@ -2,7 +2,7 @@ import Taro from '@tarojs/taro';
 import { showError } from '@/utils/helpers';
 import { getWxToken, wxLogin, clearWxSession } from '@/utils/wxAuth';
 
-const BASE_URL = process.env.TARO_APP_API_BASE || 'https://dzbike.club/dz-bike/';
+const BASE_URL = process.env.TARO_APP_API_BASE || 'https://www.dzbike.club/dz-bike/';
 const DEFAULT_TIMEOUT = 30 * 1000;
 
 export class ApiError extends Error {

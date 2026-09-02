@@ -1,5 +1,5 @@
 import { View, Text, Image, Button } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow, useShareAppMessage } from '@tarojs/taro';
 import { useState } from 'react';
 import { showError } from '@/utils/helpers';
 import {
@@ -17,6 +17,11 @@ export default function MinePage() {
   const [authVisible, setAuthVisible] = useState(false);
 
   const identified = hasWxIdentity(profile);
+
+  useShareAppMessage(() => ({
+    title: '达州自行车俱乐部',
+    path: '/pages/home/index',
+  }));
 
   useDidShow(() => {
     refreshWxProfile()

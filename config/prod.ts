@@ -24,8 +24,9 @@ export default {
     },
   },
   env: {
-    TARO_APP_API_BASE: '"https://dzbike.club/dz-bike/"',
-    TARO_APP_ASSET_BASE: '"https://dzbike.club/"',
+    // 直连 www，避免裸域 301 把 POST 登录改成 GET 导致 404
+    TARO_APP_API_BASE: '"https://www.dzbike.club/dz-bike/"',
+    TARO_APP_ASSET_BASE: '"https://www.dzbike.club/"',
     TARO_APP_WX_SUBSCRIBE_ACTIVITY_AUDIT: '""',
     TARO_APP_WX_SUBSCRIBE_BIKE_REMIND: '"p1cqXA7eVAf8p0RMEuH-S9yd4Cvt2POI0gTj5AiGawc"',
     TARO_APP_WX_SUBSCRIBE_SHOP_REMIND: '"p1cqXA7eVAf8p0RMEuH-S9yd4Cvt2POI0gTj5AiGawc"',

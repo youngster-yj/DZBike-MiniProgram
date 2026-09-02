@@ -1,5 +1,5 @@
-// 与 API 基址同源：dev 为 localhost:3001，prod 为 dzbike.club
-const ASSET_BASE = process.env.TARO_APP_ASSET_BASE || 'https://dzbike.club/';
+// 与 API 基址同源：dev 为 localhost:3001，prod 为 www.dzbike.club
+const ASSET_BASE = process.env.TARO_APP_ASSET_BASE || 'https://www.dzbike.club/';
 
 export function getAssetBase(): string {
   return ASSET_BASE.endsWith('/') ? ASSET_BASE : `${ASSET_BASE}/`;

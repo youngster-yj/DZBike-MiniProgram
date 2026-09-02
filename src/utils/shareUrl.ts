@@ -5,7 +5,7 @@ function getH5Origin(): string {
   try {
     return new URL(base).origin;
   } catch {
-    return 'https://dzbike.club';
+    return 'https://www.dzbike.club';
   }
 }
 
