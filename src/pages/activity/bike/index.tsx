@@ -845,6 +845,12 @@ export default function BikeActivityPage() {
           </View>
         </AnimatedModal>
 
+        <WxAuthModal
+          visible={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={(profile) => openJoinWithProfile(profile)}
+        />
+
       </View>
 
     );
@@ -987,12 +993,6 @@ export default function BikeActivityPage() {
           <Button size="mini" type="primary" className="button-primary" onClick={onApply}>提交</Button>
         </View>
       </AnimatedModal>
-
-      <WxAuthModal
-        visible={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={(profile) => openJoinWithProfile(profile)}
-      />
 
     </View>
 
