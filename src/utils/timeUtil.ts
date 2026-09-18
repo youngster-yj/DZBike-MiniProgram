@@ -10,6 +10,12 @@ export function formatDate(timestamp?: number): string {
   return dayjs.unix(timestamp).format('YYYY-MM-DD');
 }
 
+/** Compact deadline for share cards (fits 5:4 badge without ellipsis) */
+export function formatShareDeadline(timestamp?: number): string {
+  if (!timestamp) return '';
+  return dayjs.unix(timestamp).format('MM-DD HH:mm');
+}
+
 /** 截止时间是否已过（用于店铺活动列表） */
 export function isAfter(endTime?: number): boolean {
   if (!endTime) return false;

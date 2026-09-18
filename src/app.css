@@ -2488,9 +2488,71 @@ button[size='mini'][type='primary'] {
 .share-poster-actions {
   display: flex;
   flex-direction: row;
-  justify-content: flex-end;
-  gap: 16px;
-  margin-top: 24px;
+  flex-wrap: nowrap;
+  justify-content: stretch;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.share-poster-actions--error {
+  justify-content: stretch;
+}
+
+.share-poster-action-btn {
+  flex: 1 1 0 !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+  min-width: 0 !important;
+  height: 80px !important;
+  line-height: 80px !important;
+  border-radius: 40px !important;
+  font-size: 26px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+
+.share-poster-action-btn--ghost {
+  background: #f1f5f9 !important;
+  border: none !important;
+  color: #334155 !important;
+}
+
+.share-poster-action-btn--ghost[disabled] {
+  opacity: 0.45 !important;
+  color: #94a3b8 !important;
+}
+
+.share-poster-action-btn--primary {
+  background: #3182ce !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+.share-poster-action-btn--primary[disabled] {
+  opacity: 0.45 !important;
+}
+
+.share-poster-error {
+  padding: 56px 16px;
+  text-align: center;
+}
+
+.share-poster-error-text {
+  display: block;
+  font-size: 30px;
+  font-weight: 600;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.share-poster-error-hint {
+  display: block;
+  margin-top: 16px;
+  font-size: 26px;
+  color: #64748b;
+  line-height: 1.5;
 }
 
 .share-poster-loading {

@@ -9,7 +9,12 @@ import {
   ShopPosterInput,
   CollectPosterInput,
 } from '@/utils/sharePosterCanvas';
-import { ensureShareCardImage, getShareCoverSrc } from '@/utils/shareCardImage';
+import {
+  ensureActivityShareCardImage,
+  ensureDesignedShareCardImage,
+  ensureShareCardImage,
+  getShareCoverSrc,
+} from '@/utils/shareCardImage';
 import { showSuccess } from '@/utils/helpers';
 import { AnimatedModal } from '@/components/AnimatedModal';
 
@@ -29,7 +34,7 @@ interface SharePosterModalProps {
   onShareImageReady?: (tempPath: string) => void;
 }
 
-const GENERATE_TIMEOUT_MS = 8000;
+const GENERATE_TIMEOUT_MS = 15000;
 
 export function SharePosterModal({ visible, payload, onClose, onShareImageReady }: SharePosterModalProps) {
   const [previewUrl, setPreviewUrl] = useState('');
@@ -37,10 +42,10 @@ export function SharePosterModal({ visible, payload, onClose, onShareImageReady 
   const [rendering, setRendering] = useState(true);
   const [thumbPreparing, setThumbPreparing] = useState(false);
   const [renderError, setRenderError] = useState('');
-  const [thumbError, setThumbError] = useState('');
   const [saving, setSaving] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const cancelledRef = useRef(false);
+  const runIdRef = useRef(0);
   const onShareImageReadyRef = useRef(onShareImageReady);
   onShareImageReadyRef.current = onShareImageReady;
 
@@ -48,15 +53,20 @@ export function SharePosterModal({ visible, payload, onClose, onShareImageReady 
     if (!visible || !payload) return undefined;
 
     cancelledRef.current = false;
+    const runId = ++runIdRef.current;
     setRendering(true);
     setThumbPreparing(false);
     setRenderError('');
-    setThumbError('');
     setPreviewUrl('');
     setShareThumbUrl('');
 
     const runGenerate = async () => {
       const coverSrc = getShareCoverSrc(payload);
+      let timedOut = false;
+      const timeoutId = setTimeout(() => {
+        timedOut = true;
+      }, GENERATE_TIMEOUT_MS);
+
       try {
         const tempFilePath = await Promise.race([
           generateSharePosterImage(payload),
@@ -64,28 +74,53 @@ export function SharePosterModal({ visible, payload, onClose, onShareImageReady 
             setTimeout(() => reject(new Error('海报生成超时，请重试')), GENERATE_TIMEOUT_MS);
           }),
         ]);
-        if (cancelledRef.current) return;
+        clearTimeout(timeoutId);
+        if (cancelledRef.current || runId !== runIdRef.current) return;
         setPreviewUrl(tempFilePath);
         setRendering(false);
 
         if (!coverSrc) {
-          // no cover: still allow share with poster image
           setShareThumbUrl(tempFilePath);
           onShareImageReadyRef.current?.(tempFilePath);
           return;
         }
         setThumbPreparing(true);
-        const shareThumb = await ensureShareCardImage(coverSrc);
-        if (cancelledRef.current) return;
+        let shareThumb: string | null = null;
+        if (payload.kind === 'activity') {
+          shareThumb = await ensureActivityShareCardImage({
+            bannerSrc: coverSrc,
+            title: payload.data.title,
+            prize: payload.data.prize,
+            cacheKey: payload.data.activityId || payload.data.activityKey || coverSrc,
+          });
+        } else if (payload.kind === 'shop') {
+          const deadline = (payload.data.endTimeText || '').replace(/^\d{4}-/, '');
+          shareThumb = await ensureDesignedShareCardImage({
+            bannerSrc: coverSrc,
+            title: payload.data.title,
+            badgeLabel: deadline ? '截止' : undefined,
+            badgeText: deadline || undefined,
+            cacheKey: payload.data.activityId || coverSrc,
+          });
+        } else {
+          shareThumb = await ensureShareCardImage(coverSrc);
+        }
+        if (cancelledRef.current || runId !== runIdRef.current) return;
         const thumb = shareThumb || tempFilePath;
         setShareThumbUrl(thumb);
         onShareImageReadyRef.current?.(thumb);
-        // thumb 失败时用海报兜底，不再提示「分享图生成失败」
       } catch (error) {
-        if (cancelledRef.current) return;
-        setRenderError(error instanceof Error ? error.message : '海报生成失败');
+        clearTimeout(timeoutId);
+        if (cancelledRef.current || runId !== runIdRef.current) return;
+        const message =
+          timedOut || (error instanceof Error && error.message.includes('超时'))
+            ? '海报生成超时，请重试'
+            : error instanceof Error
+              ? error.message
+              : '海报生成失败';
+        setRenderError(message);
       } finally {
-        if (!cancelledRef.current) {
+        if (!cancelledRef.current && runId === runIdRef.current) {
           setRendering(false);
           setThumbPreparing(false);
         }
@@ -93,7 +128,7 @@ export function SharePosterModal({ visible, payload, onClose, onShareImageReady 
     };
 
     Taro.nextTick(() => {
-      if (!cancelledRef.current) runGenerate();
+      if (!cancelledRef.current && runId === runIdRef.current) runGenerate();
     });
 
     return () => {
@@ -118,8 +153,9 @@ export function SharePosterModal({ visible, payload, onClose, onShareImageReady 
     }
   };
 
+  const hasError = Boolean(renderError) && !previewUrl;
   const shareDisabled = rendering || thumbPreparing || !previewUrl || !shareThumbUrl;
-  const showRetry = !rendering && !thumbPreparing && (Boolean(renderError) || Boolean(thumbError));
+  const showRetry = hasError && !rendering && !thumbPreparing;
 
   return (
     <AnimatedModal
@@ -143,38 +179,50 @@ export function SharePosterModal({ visible, payload, onClose, onShareImageReady 
             showMenuByLongpress
           />
         </ScrollView>
-      ) : renderError ? (
-        <View className="share-poster-loading">
-          <Text>{renderError}</Text>
+      ) : hasError ? (
+        <View className="share-poster-error">
+          <Text className="share-poster-error-text">{renderError}</Text>
+          <Text className="share-poster-error-hint">网络较慢或图片较大时可能超时，请点击重试</Text>
         </View>
       ) : null}
-      {thumbPreparing ? (
-        <Text className="share-poster-remark dz-fade-in">分享图准备中...</Text>
-      ) : thumbError ? (
-        <Text className="share-poster-remark">{thumbError}</Text>
-      ) : (
-        <Text className="share-poster-remark">如遇无法保存，请长按海报截图分享~</Text>
-      )}
-      <View className="share-poster-actions">
-        <Button size="mini" onClick={onClose}>关闭</Button>
+      {!hasError ? (
+        thumbPreparing ? (
+          <Text className="share-poster-remark dz-fade-in">分享图准备中...</Text>
+        ) : (
+          <Text className="share-poster-remark">如遇无法保存，请长按海报截图分享~</Text>
+        )
+      ) : null}
+      <View className={`share-poster-actions${hasError ? ' share-poster-actions--error' : ''}`}>
+        <Button className="share-poster-action-btn share-poster-action-btn--ghost" onClick={onClose}>
+          关闭
+        </Button>
         {showRetry ? (
-          <Button size="mini" type="primary" className="button-primary" onClick={onRetry}>
+          <Button
+            className="share-poster-action-btn share-poster-action-btn--primary"
+            onClick={onRetry}
+          >
             重试
           </Button>
-        ) : null}
-        <Button size="mini" loading={saving} disabled={!previewUrl || rendering} onClick={onSave}>
-          保存到相册
-        </Button>
-        <Button
-          size="mini"
-          type="primary"
-          className="button-primary"
-          openType="share"
-          disabled={shareDisabled}
-          loading={thumbPreparing}
-        >
-          转发给好友
-        </Button>
+        ) : (
+          <>
+            <Button
+              className="share-poster-action-btn share-poster-action-btn--ghost"
+              loading={saving}
+              disabled={!previewUrl || rendering}
+              onClick={onSave}
+            >
+              保存到相册
+            </Button>
+            <Button
+              className="share-poster-action-btn share-poster-action-btn--primary"
+              openType="share"
+              disabled={shareDisabled}
+              loading={thumbPreparing}
+            >
+              转发给好友
+            </Button>
+          </>
+        )}
       </View>
     </AnimatedModal>
   );

@@ -155,8 +155,17 @@ function getPosterImageUrl(payload: SharePosterPayloadInput): string {
   return payload.data.imageUrl;
 }
 
-function getActivityBodyHeight(): number {
-  return ACTIVITY_BODY_GAP + 34 + 28 + 28;
+const ACTIVITY_PRIZE_BLOCK = 40;
+
+function formatPosterPrize(prize: string): string {
+  const text = prize.trim();
+  if (!text) return '';
+  const label = `奖品 · ${text}`;
+  return label.length > 22 ? `${label.slice(0, 21)}…` : label;
+}
+
+function getActivityBodyHeight(hasPrize: boolean): number {
+  return ACTIVITY_BODY_GAP + 34 + 28 + 28 + (hasPrize ? ACTIVITY_PRIZE_BLOCK : 0);
 }
 
 export function computePosterLayout(
@@ -167,7 +176,8 @@ export function computePosterLayout(
 
   if (payload.kind === 'activity') {
     const heroHeight = ACTIVITY_HERO_HEIGHT;
-    const bodyHeight = getActivityBodyHeight();
+    const hasPrize = Boolean(payload.data.prize?.trim());
+    const bodyHeight = getActivityBodyHeight(hasPrize);
     const footerTop = heroHeight + bodyHeight;
     return {
       totalHeight: footerTop + FOOTER_HEIGHT,
@@ -401,10 +411,16 @@ function drawFooter(
   const hasInfoLines = infoLines.length > 0;
 
   if (hasInfoLines) {
-    ctx.fillStyle = '#64748b';
-    ctx.font = '22px sans-serif';
+    const infoMaxW = POSTER_WIDTH - PADDING * 2 - QR_SIZE - 20;
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.textBaseline = 'top';
     infoLines.forEach((line, index) => {
-      ctx.fillText(line, PADDING, footerTop + 16 + index * 30);
+      const text =
+        ctx.measureText(line).width > infoMaxW
+          ? `${line.slice(0, Math.max(4, Math.floor(line.length * (infoMaxW / ctx.measureText(line).width)) - 1))}…`
+          : line;
+      ctx.fillText(text, PADDING, footerTop + 18 + index * 32);
     });
     ctx.fillStyle = '#334155';
     ctx.font = 'bold 22px sans-serif';
@@ -444,6 +460,9 @@ export interface ActivityPosterInput {
   startTimeText: string;
   bannerSrc: string;
   h5Url: string;
+  prize?: string;
+  /** Used for activity share-card cache key */
+  activityId?: string;
 }
 
 export interface ProductPosterInput {
@@ -458,6 +477,8 @@ export interface ShopPosterInput {
   endTimeText: string;
   imageUrl: string;
   h5Url: string;
+  /** Used for designed share-card cache key */
+  activityId?: string;
 }
 
 export interface CollectPosterInput {
@@ -597,6 +618,20 @@ export async function renderActivityPoster(
   ctx.fillText(`${input.publisherName} 邀请您`, PADDING, y);
   y += 28;
   ctx.fillText(input.startTimeText, PADDING, y);
+  y += 28;
+
+  const prizeLabel = input.prize ? formatPosterPrize(input.prize) : '';
+  if (prizeLabel) {
+    const barH = 32;
+    const barW = POSTER_WIDTH - PADDING * 2;
+    ctx.fillStyle = '#fff7ed';
+    ctx.fillRect(PADDING, y, barW, barH);
+    ctx.fillStyle = '#f97316';
+    ctx.fillRect(PADDING, y, 4, barH);
+    ctx.fillStyle = '#9a3412';
+    ctx.font = '20px sans-serif';
+    ctx.fillText(prizeLabel, PADDING + 12, y + 7);
+  }
 
   drawFooter(ctx, layout.footerTop, input.h5Url, layout.footerInfoLines);
   return layout.totalHeight;

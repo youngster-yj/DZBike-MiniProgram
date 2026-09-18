@@ -33,7 +33,13 @@ import { SharePosterModal } from '@/components/SharePoster';
 import { ShareActionButton } from '@/components/ShareActionButton';
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { buildBikeH5Url, buildBikeMiniPath } from '@/utils/shareUrl';
-import { ensureShareCardImage, getShareCardImage } from '@/utils/shareCardImage';
+import {
+  buildActivityShareTitle,
+  ensureActivityShareCardImage,
+  ensureShareCardImage,
+  getActivityShareCardImage,
+  setActivityShareCardImage,
+} from '@/utils/shareCardImage';
 import { hasWxIdentity, refreshWxProfile } from '@/utils/wxProfile';
 import { WxAuthModal } from '@/components/WxAuthModal';
 import { getVisibleStoreAddressDetailSync, getShopDisplayNameSync } from '@/services/platformConfig';
@@ -242,7 +248,12 @@ export default function BikeActivityPage() {
     if (!detail) return;
     const cover = getBikeShareBannerPath(detail.source);
     let cancelled = false;
-    ensureShareCardImage(cover).then((path) => {
+    ensureActivityShareCardImage({
+      bannerSrc: cover,
+      title: detail.title,
+      prize: detail.prize,
+      cacheKey: detail._id,
+    }).then((path) => {
       if (!cancelled && path) shareCardPathRef.current = path;
     });
     return () => {
@@ -251,21 +262,42 @@ export default function BikeActivityPage() {
   }, [detail]);
 
   useShareAppMessage(() => {
-    const title = detail?.title || '骑行活动';
+    const title = buildActivityShareTitle(detail?.title, detail?.prize);
     const path = activityId
       ? buildBikeMiniPath(activityId, shareKeyRef.current || activityKeyFromQuery)
       : '/pages/activity/bike/index';
     const coverSrc = getBikeShareBannerPath(detail?.source);
-    const ready = shareCardPathRef.current || getShareCardImage(coverSrc);
+    const cacheKey = detail?._id || '';
+    const ready =
+      shareCardPathRef.current ||
+      (cacheKey ? getActivityShareCardImage(cacheKey) : '');
     if (ready) {
       return { title, path, imageUrl: ready };
+    }
+    if (detail) {
+      return {
+        title,
+        path,
+        promise: ensureActivityShareCardImage({
+          bannerSrc: coverSrc,
+          title: detail.title,
+          prize: detail.prize,
+          cacheKey: detail._id,
+        }).then(async (thumb) => {
+          let imageUrl = thumb || '';
+          if (!imageUrl) {
+            imageUrl = (await ensureShareCardImage(coverSrc)) || coverSrc;
+          }
+          if (imageUrl) shareCardPathRef.current = imageUrl;
+          return { title, path, imageUrl };
+        }),
+      };
     }
     return {
       title,
       path,
       promise: ensureShareCardImage(coverSrc).then((thumb) => {
         if (thumb) shareCardPathRef.current = thumb;
-        // Menu-share last resort only: packaged asset if thumb failed
         return { title, path, imageUrl: thumb || coverSrc };
       }),
     };
@@ -511,6 +543,8 @@ export default function BikeActivityPage() {
         startTimeText: formatDateTime(detail.time),
         bannerSrc: getBikeShareBannerPath(detail.source),
         h5Url: buildBikeH5Url(detail._id, shareKey),
+        prize: detail.prize || undefined,
+        activityId: detail._id,
       },
     };
   }, [detail, shareKey]);
@@ -602,7 +636,7 @@ export default function BikeActivityPage() {
 
               {detail.meetupShop ? (
                 <View className="activity-bike-index-infoItem">
-                  <Text className="activity-bike-index-infoLabel">集合门店</Text>
+                  <Text className="activity-bike-index-infoLabel">集合地点</Text>
                   <Text className="activity-bike-index-infoValue">
                     {getShopDisplayNameSync(detail.meetupShop) || detail.meetupShop}
                   </Text>
@@ -827,6 +861,9 @@ export default function BikeActivityPage() {
           onClose={() => setShowSharePoster(false)}
           onShareImageReady={(tempPath) => {
             shareCardPathRef.current = tempPath;
+            if (detail?._id) {
+              setActivityShareCardImage(tempPath, detail._id);
+            }
           }}
         />
 
@@ -935,6 +972,13 @@ export default function BikeActivityPage() {
         <Input className="form-input" placeholder="活动简介" value={applyForm.content} onInput={(e) => setApplyForm({ ...applyForm, content: e.detail.value })} />
         <Input className="form-input form-input--withHint" placeholder="活动口令" value={applyForm.key} onInput={(e) => setApplyForm({ ...applyForm, key: e.detail.value })} />
         <Text className="form-field-hint">用于限制无关人员报名挤占名额，扫码参与会自动带入；分享海报与查发布者电话时也可能需校验此口令</Text>
+        <Input
+          className="form-input"
+          placeholder="集合地点（可选，可输入）"
+          maxlength={50}
+          value={applyForm.meetupShop}
+          onInput={(e) => setApplyForm({ ...applyForm, meetupShop: e.detail.value })}
+        />
         <Picker
           mode="selector"
           range={getVisibleStoreAddressDetailSync().map((s) => s.title || s.shop)}
@@ -945,9 +989,7 @@ export default function BikeActivityPage() {
           }}
         >
           <View className="form-input" style={{ display: 'flex', alignItems: 'center' }}>
-            {applyForm.meetupShop
-              ? (getShopDisplayNameSync(applyForm.meetupShop) || applyForm.meetupShop)
-              : '集合门店（可选）'}
+            <Text style={{ color: '#999' }}>快捷选择门店</Text>
           </View>
         </Picker>
         <Input

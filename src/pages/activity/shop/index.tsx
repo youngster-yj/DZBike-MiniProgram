@@ -14,14 +14,20 @@ import { StoreAddressCard } from '@/components/StoreAddressCard';
 import { ImagesGridBox } from '@/components/ImagesGridBox';
 import { toAssetUrl } from '@/utils/assetUrl';
 import { getShowStoreAddressDetailSync } from '@/services/platformConfig';
-import { formatDateTime, isTimestampFuture, maskName, maskPhone } from '@/utils/timeUtil';
+import { formatDateTime, formatShareDeadline, isTimestampFuture, maskName, maskPhone } from '@/utils/timeUtil';
 import { judgeName, judgePhone, showSuccess, showError } from '@/utils/helpers';
 import { getOrCreateDeviceId } from '@/utils/deviceId';
 import { ApiError } from '@/services/request';
 import { SharePosterModal } from '@/components/SharePoster';
 import { ShareActionButton } from '@/components/ShareActionButton';
 import { buildShopH5Url, buildShopMiniPath } from '@/utils/shareUrl';
-import { ensureShareCardImage, getShareCardImage } from '@/utils/shareCardImage';
+import {
+  buildShopShareTitle,
+  ensureDesignedShareCardImage,
+  ensureShareCardImage,
+  getDesignedShareCardImage,
+  setDesignedShareCardImage,
+} from '@/utils/shareCardImage';
 import { AnimatedModal } from '@/components/AnimatedModal';
 import { hasWxIdentity, refreshWxProfile } from '@/utils/wxProfile';
 import { WxAuthModal } from '@/components/WxAuthModal';
@@ -96,10 +102,18 @@ export default function ShopActivityPage() {
 
   useEffect(() => {
     shareCardPathRef.current = '';
-    const cover = detail?.imgUrl?.[0] ? toAssetUrl(detail.imgUrl[0]) : '';
+    if (!detail) return;
+    const cover = detail.imgUrl?.[0] ? toAssetUrl(detail.imgUrl[0]) : '';
     if (!cover) return;
     let cancelled = false;
-    ensureShareCardImage(cover).then((path) => {
+    const endTimeText = formatShareDeadline(detail.time);
+    ensureDesignedShareCardImage({
+      bannerSrc: cover,
+      title: detail.title,
+      badgeLabel: '截止',
+      badgeText: endTimeText,
+      cacheKey: detail._id,
+    }).then((path) => {
       if (!cancelled && path) shareCardPathRef.current = path;
     });
     return () => {
@@ -117,23 +131,35 @@ export default function ShopActivityPage() {
   });
 
   useShareAppMessage(() => {
-    const title = detail?.title || '店铺活动';
+    const title = buildShopShareTitle(detail?.title);
     const path = buildShopMiniPath(shopId);
     const coverSrc = detail?.imgUrl?.[0] ? toAssetUrl(detail.imgUrl[0]) : undefined;
-    const ready = shareCardPathRef.current || getShareCardImage(coverSrc);
+    const ready =
+      shareCardPathRef.current ||
+      (detail?._id ? getDesignedShareCardImage(detail._id) : '');
     if (ready) {
       return { title, path, imageUrl: ready };
     }
-    if (!coverSrc) {
+    if (!coverSrc || !detail) {
       return { title, path };
     }
+    const endTimeText = formatShareDeadline(detail.time);
     return {
       title,
       path,
-      promise: ensureShareCardImage(coverSrc).then((thumb) => {
-        if (thumb) shareCardPathRef.current = thumb;
-        // Menu-share last resort only
-        return { title, path, imageUrl: thumb || coverSrc };
+      promise: ensureDesignedShareCardImage({
+        bannerSrc: coverSrc,
+        title: detail.title,
+        badgeLabel: '截止',
+        badgeText: endTimeText,
+        cacheKey: detail._id,
+      }).then(async (thumb) => {
+        let imageUrl = thumb || '';
+        if (!imageUrl) {
+          imageUrl = (await ensureShareCardImage(coverSrc)) || coverSrc;
+        }
+        if (imageUrl) shareCardPathRef.current = imageUrl;
+        return { title, path, imageUrl };
       }),
     };
   });
@@ -292,11 +318,13 @@ export default function ShopActivityPage() {
               endTimeText: formatDateTime(detail.time),
               imageUrl: images[0] || '',
               h5Url: buildShopH5Url(detail._id),
+              activityId: detail._id,
             },
           }}
           onClose={() => setShowSharePoster(false)}
           onShareImageReady={(tempPath) => {
             shareCardPathRef.current = tempPath;
+            setDesignedShareCardImage(tempPath, detail._id);
           }}
         />
 
