@@ -2718,6 +2718,19 @@ button[size='mini'][type='primary'] {
   color: #1e293b;
 }
 
+.mine-index-menuText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mine-index-menuDesc {
+  font-size: 22px;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
 .mine-index-menuArrow {
   font-size: 36px;
   color: #cbd5e1;
@@ -2730,6 +2743,100 @@ button[size='mini'][type='primary'] {
   margin-top: 48px;
   font-size: 22px;
   color: #94a3b8;
+}
+
+.web-entry-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 120;
+  padding: 48px;
+  box-sizing: border-box;
+}
+
+.web-entry-body {
+  width: 100%;
+  max-width: 560px;
+  background: #fff;
+  border-radius: 28px;
+  padding: 40px 36px 32px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.web-entry-brand {
+  font-size: 28px;
+  font-weight: 700;
+  color: #3182ce;
+  letter-spacing: 0.08em;
+}
+
+.web-entry-lead {
+  margin-top: 12px;
+  font-size: 32px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.4;
+}
+
+.web-entry-qrWrap {
+  margin-top: 28px;
+  width: 360px;
+  height: 360px;
+  border-radius: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.web-entry-qr {
+  width: 320px;
+  height: 320px;
+}
+
+.web-entry-qrHint {
+  padding: 0 24px;
+  font-size: 24px;
+  color: #64748b;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.web-entry-host {
+  margin-top: 20px;
+  font-size: 30px;
+  font-weight: 600;
+  color: #334155;
+  letter-spacing: 0.02em;
+}
+
+.web-entry-copy {
+  margin-top: 28px !important;
+  width: 100% !important;
+  height: 80px !important;
+  line-height: 80px !important;
+  border-radius: 40px !important;
+  background: #3182ce !important;
+  color: #fff !important;
+  font-size: 28px !important;
+  font-weight: 600 !important;
+  border: none !important;
+}
+
+.web-entry-hint {
+  margin-top: 16px;
+  font-size: 22px;
+  color: #94a3b8;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .mine-auth-mask {

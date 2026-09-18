@@ -1,6 +1,6 @@
 import { getAssetBase } from '@/utils/assetUrl';
 
-function getH5Origin(): string {
+export function getH5Origin(): string {
   const base = getAssetBase();
   try {
     return new URL(base).origin;

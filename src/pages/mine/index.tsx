@@ -1,7 +1,7 @@
 import { View, Text, Image, Button } from '@tarojs/components';
 import Taro, { useDidShow, useShareAppMessage } from '@tarojs/taro';
 import { useState } from 'react';
-import { showError } from '@/utils/helpers';
+import { showError, makePhoneCall } from '@/utils/helpers';
 import {
   getCachedProfile,
   refreshWxProfile,
@@ -10,11 +10,12 @@ import {
 import { WxProfileData } from '@/services/types';
 import { toAssetUrl } from '@/utils/assetUrl';
 import { WxAuthModal } from '@/components/WxAuthModal';
-import { makePhoneCall } from '@/utils/helpers';
+import { WebEntry } from '@/components/WebEntry';
 
 export default function MinePage() {
   const [profile, setProfile] = useState<WxProfileData | null>(getCachedProfile());
   const [authVisible, setAuthVisible] = useState(false);
+  const [webVisible, setWebVisible] = useState(false);
 
   const identified = hasWxIdentity(profile);
 
@@ -99,6 +100,13 @@ export default function MinePage() {
           <Text className="mine-index-menuLabel">投诉反馈</Text>
           <Text className="mine-index-menuArrow">›</Text>
         </View>
+        <View className="mine-index-menuItem" onClick={() => setWebVisible(true)}>
+          <View className="mine-index-menuText">
+            <Text className="mine-index-menuLabel">网页版</Text>
+            <Text className="mine-index-menuDesc">浏览器打开</Text>
+          </View>
+          <Text className="mine-index-menuArrow">›</Text>
+        </View>
       </View>
 
       <Text
@@ -113,6 +121,7 @@ export default function MinePage() {
         onClose={() => setAuthVisible(false)}
         onSuccess={(next) => setProfile(next)}
       />
+      <WebEntry visible={webVisible} onClose={() => setWebVisible(false)} />
     </View>
   );
 }
