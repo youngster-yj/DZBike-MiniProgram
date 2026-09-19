@@ -28,7 +28,6 @@ import { requestActivityAuditSubscribe, requestJoinRemindSubscribe, recordJoinRe
 import officialBg from '@/assets/activity/official.png';
 import personalBg from '@/assets/activity/personal.png';
 import { Phone } from '@nutui/icons-react-taro';
-import { ShareKeyGate } from '@/components/ShareKeyGate';
 import { SharePosterModal } from '@/components/SharePoster';
 import { ShareActionButton } from '@/components/ShareActionButton';
 import { AnimatedModal } from '@/components/AnimatedModal';
@@ -40,7 +39,7 @@ import {
   getActivityShareCardImage,
   setActivityShareCardImage,
 } from '@/utils/shareCardImage';
-import { hasWxIdentity, refreshWxProfile } from '@/utils/wxProfile';
+import { hasWxIdentity, refreshWxProfile, ensureWxSession } from '@/utils/wxProfile';
 import { WxAuthModal } from '@/components/WxAuthModal';
 import { getVisibleStoreAddressDetailSync, getShopDisplayNameSync } from '@/services/platformConfig';
 
@@ -54,14 +53,11 @@ function getBikeShareBannerPath(source?: string) {
 
 const TIMELINESS_VALUES: Array<'underway' | 'finished'> = ['underway', 'finished'];
 
-
+type AuthIntent = 'join' | 'phone' | 'share';
 
 function showApiError(e: unknown, fallback: string) {
-
   if (e instanceof ApiError && e.displayed) return;
-
   showError(e instanceof Error ? e.message : fallback);
-
 }
 
 
@@ -92,19 +88,18 @@ export default function BikeActivityPage() {
 
   const [showJoin, setShowJoin] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authIntent, setAuthIntent] = useState<AuthIntent>('join');
 
   const [showJoinList, setShowJoinList] = useState(false);
 
   const [showJoinListVerify, setShowJoinListVerify] = useState(false);
-
-  const [showPhoneKey, setShowPhoneKey] = useState(false);
 
   const [joinList, setJoinList] = useState<API.JoinDataProps[]>([]);
 
 
 
   const [applyForm, setApplyForm] = useState({
-    name: '', phone: '', title: '', content: '', key: '', prize: '',
+    name: '', phone: '', title: '', content: '', key: '', manageKey: '', prize: '',
     meetupShop: '', limit: '50', difficulty: '' as '' | 'leisure' | 'advanced' | 'challenge',
   });
   const [startDate, setStartDate] = useState('');
@@ -115,13 +110,8 @@ export default function BikeActivityPage() {
   const [joinForm, setJoinForm] = useState({ name: '', phone: '', key: '' });
   const [wxJoinMode, setWxJoinMode] = useState(false);
 
-  const [joinListForm, setJoinListForm] = useState({ name: '', phone: '' });
+  const [joinListForm, setJoinListForm] = useState({ manageKey: '' });
 
-  const [phoneKeyForm, setPhoneKeyForm] = useState({ key: '' });
-
-  const [organizerPhone, setOrganizerPhone] = useState('');
-
-  const [showShareKey, setShowShareKey] = useState(false);
   const [showSharePoster, setShowSharePoster] = useState(false);
   const [shareKey, setShareKey] = useState('');
   const shareKeyRef = useRef('');
@@ -305,17 +295,28 @@ export default function BikeActivityPage() {
 
 
 
-  const allowJoin = useMemo(() => {
-
-    if (!detail) return false;
-
-    return isTimestampFuture(detail.time)
-
-      && isTimestampFuture(detail.endTime)
-
-      && !detail.isEnd;
-
+  const joinedCount = useMemo(() => {
+    if (!detail) return 0;
+    return Math.max(detail.joinCount ?? 0, detail.joinData?.length ?? 0);
   }, [detail]);
+
+  const isFull = useMemo(() => {
+    if (!detail) return false;
+    const limit = Number(detail.limit);
+    return Number.isFinite(limit) && limit > 0 && joinedCount >= limit;
+  }, [detail, joinedCount]);
+
+  const timeOpen = useMemo(() => {
+    if (!detail) return false;
+    return (
+      isTimestampFuture(detail.time) &&
+      isTimestampFuture(detail.endTime) &&
+      !detail.isEnd
+    );
+  }, [detail]);
+
+  const allowJoin = timeOpen && !isFull;
+  const showFullJoinBtn = timeOpen && isFull;
 
 
 
@@ -324,12 +325,19 @@ export default function BikeActivityPage() {
     const phoneErr = judgePhone(applyForm.phone);
     if (nameErr !== true) return showError(String(nameErr));
     if (phoneErr !== true) return showError(String(phoneErr));
-    if (!applyForm.title || !applyForm.content || !applyForm.key || !startDate || !startTime) {
+    if (!applyForm.title || !applyForm.content || !applyForm.key || !applyForm.manageKey || !startDate || !startTime) {
       return showError('请填写完整活动信息');
+    }
+    if (applyForm.manageKey.trim().length < 4 || applyForm.manageKey.trim().length > 32) {
+      return showError('管理凭证长度需为4～32字');
+    }
+    if (applyForm.manageKey.trim() === applyForm.key.trim()) {
+      return showError('管理凭证不能与活动口令相同');
     }
     const limitNum = Number(applyForm.limit);
     if (!Number.isFinite(limitNum) || limitNum < 1) return showError('请填写有效报名人数');
     try {
+      await ensureWxSession();
       await requestActivityAuditSubscribe();
       const res = await applyActivity({
         name: applyForm.name,
@@ -337,6 +345,7 @@ export default function BikeActivityPage() {
         title: applyForm.title,
         content: applyForm.content,
         key: applyForm.key,
+        manageKey: applyForm.manageKey.trim(),
         prize: applyForm.prize || undefined,
         meetupShop: applyForm.meetupShop || undefined,
         limit: limitNum,
@@ -345,8 +354,24 @@ export default function BikeActivityPage() {
         endTime: endDate && endTime ? buildTimestamp(endDate, endTime) : undefined,
       });
       if (res.ok) {
-        showSuccess('提交成功，等待审核');
         setShowApply(false);
+        const mk = res.data?.manageKey || applyForm.manageKey.trim();
+        try {
+          Taro.setStorageSync(`manageKey:${res.data?._id || ''}`, mk);
+        } catch {
+          /* ignore */
+        }
+        Taro.showModal({
+          title: '请保管管理凭证',
+          content: `你设置的管理凭证（不是报名口令）：${mk}\n查看完整参与名单时需要它，请复制保存。`,
+          confirmText: '复制并关闭',
+          showCancel: false,
+          success: (r) => {
+            if (r.confirm) {
+              Taro.setClipboardData({ data: mk }).catch(() => undefined);
+            }
+          },
+        });
       }
     } catch (e) {
       showApiError(e, '提交失败');
@@ -370,6 +395,7 @@ export default function BikeActivityPage() {
         openJoinWithProfile(profile!);
         return;
       }
+      setAuthIntent('join');
       setShowAuthModal(true);
     } catch {
       setWxJoinMode(false);
@@ -381,6 +407,7 @@ export default function BikeActivityPage() {
   const onJoin = async () => {
     if (wxJoinMode) {
       if (!joinForm.name || !joinForm.phone) {
+        setAuthIntent('join');
         setShowAuthModal(true);
         return;
       }
@@ -417,38 +444,56 @@ export default function BikeActivityPage() {
     }
   };
 
+  const openSharePoster = (key: string) => {
+    shareKeyRef.current = key;
+    setShareKey(key);
+    setShowSharePoster(true);
+  };
 
-
-  const onFetchPhone = async () => {
+  const fetchOrganizerPhoneAfterAuth = async () => {
     if (!detail) return;
-    if (!phoneKeyForm.key) return showError('请输入口令');
     try {
-      const res = await fetchOrganizerPhone({
-        activityId: detail._id,
-        key: phoneKeyForm.key,
-      });
+      const res = await fetchOrganizerPhone({ activityId: detail._id });
       if (res.ok) {
-        setShowPhoneKey(false);
         makePhoneCall(res.data);
       }
     } catch (e) {
-      showApiError(e, '验证失败');
+      showApiError(e, '获取失败');
     }
   };
 
+  const fetchShareKeyAfterAuth = async () => {
+    if (!detail) return;
+    try {
+      const res = await fetchShareKey({ activityId: detail._id });
+      if (res.ok && res.data?.key) {
+        openSharePoster(res.data.key);
+        return;
+      }
+      showError(res.reason || '获取分享口令失败');
+    } catch (e) {
+      showApiError(e, '获取分享口令失败');
+    }
+  };
 
+  const onAuthSuccess = (profile: { nickName: string; phone: string }) => {
+    setShowAuthModal(false);
+    if (authIntent === 'phone') {
+      fetchOrganizerPhoneAfterAuth();
+      return;
+    }
+    if (authIntent === 'share') {
+      fetchShareKeyAfterAuth();
+      return;
+    }
+    openJoinWithProfile(profile);
+  };
 
   const onFetchJoinList = async () => {
 
     if (!detail) return;
 
-    const nameErr = judgeName(joinListForm.name);
-
-    const phoneErr = judgePhone(joinListForm.phone);
-
-    if (nameErr !== true) return showError(String(nameErr));
-
-    if (phoneErr !== true) return showError(String(phoneErr));
+    if (!joinListForm.manageKey.trim()) return showError('请输入管理凭证');
 
     try {
 
@@ -456,9 +501,7 @@ export default function BikeActivityPage() {
 
         activityId: detail._id,
 
-        name: joinListForm.name,
-
-        phone: joinListForm.phone,
+        manageKey: joinListForm.manageKey.trim(),
 
       });
 
@@ -484,29 +527,38 @@ export default function BikeActivityPage() {
 
 
 
-  const openPhoneKeyModal = async () => {
+  const openJoinList = async () => {
     if (!detail) return;
-    setOrganizerPhone('');
-    setPhoneKeyForm({ key: '' });
-    if (hasWxIdentity()) {
-      try {
-        const res = await fetchOrganizerPhone({ activityId: detail._id });
-        if (res.ok) {
-          makePhoneCall(res.data);
-        }
-      } catch (e) {
-        showApiError(e, '获取失败');
+    try {
+      await ensureWxSession();
+      const res = await fetchJoinList({ activityId: detail._id }, { silent: true });
+      if (res.ok) {
+        setJoinList(res.data);
+        setShowJoinList(true);
+        return;
       }
-      return;
+    } catch (_) {
+      /* 非发起人或无 openid：改走管理凭证 */
     }
-    setShowPhoneKey(true);
+    setJoinListForm({ manageKey: '' });
+    setShowJoinListVerify(true);
   };
 
-  const openSharePoster = (key: string) => {
-    shareKeyRef.current = key;
-    setShareKey(key);
-    setShowShareKey(false);
-    setShowSharePoster(true);
+
+
+  const openPhoneKeyModal = async () => {
+    if (!detail) return;
+    try {
+      const profile = await refreshWxProfile();
+      if (hasWxIdentity(profile)) {
+        await fetchOrganizerPhoneAfterAuth();
+        return;
+      }
+      setAuthIntent('phone');
+      setShowAuthModal(true);
+    } catch {
+      showError('请先登录后再获取发布者号码');
+    }
   };
 
   const onShareActivity = async () => {
@@ -516,20 +568,17 @@ export default function BikeActivityPage() {
       openSharePoster(existingKey);
       return;
     }
-    if (hasWxIdentity()) {
-      try {
-        const res = await fetchShareKey({ activityId: detail._id });
-        if (res.ok && res.data?.key) {
-          openSharePoster(res.data.key);
-          return;
-        }
-        showError(res.reason || '获取分享口令失败');
-      } catch (e) {
-        showApiError(e, '获取分享口令失败');
+    try {
+      const profile = await refreshWxProfile();
+      if (hasWxIdentity(profile)) {
+        await fetchShareKeyAfterAuth();
+        return;
       }
-      return;
+      setAuthIntent('share');
+      setShowAuthModal(true);
+    } catch {
+      showError('请先登录后再分享活动');
     }
-    setShowShareKey(true);
   };
 
   const sharePosterPayload = useMemo(() => {
@@ -584,17 +633,14 @@ export default function BikeActivityPage() {
               </Text>
 
               {!isTimestampFuture(detail.time) && (
-
                 <Text className="activity-bike-index-tag activity-bike-index-tagEnded">活动已结束</Text>
-
               )}
-
               {detail.endTime && !isTimestampFuture(detail.endTime) && (
-
                 <Text className="activity-bike-index-tag activity-bike-index-tagClosed">报名已截止</Text>
-
               )}
-
+              {timeOpen && isFull && (
+                <Text className="activity-bike-index-tag activity-bike-index-tagFull">报名已满</Text>
+              )}
             </View>
 
 
@@ -645,9 +691,14 @@ export default function BikeActivityPage() {
 
               <View className="activity-bike-index-infoItem">
                 <Text className="activity-bike-index-infoLabel">报名人数</Text>
-                <Text className="activity-bike-index-infoValue">
-                  {Math.max(detail.joinCount ?? 0, detail.joinData?.length ?? 0)}/{detail.limit}
-                </Text>
+                <View className={`activity-bike-index-infoValue${isFull ? ' activity-bike-index-infoValueFull' : ''}`}>
+                  <Text className={isFull ? 'activity-bike-index-countFull' : undefined}>
+                    {joinedCount}/{detail.limit}
+                  </Text>
+                  {isFull ? (
+                    <Text className="activity-bike-index-tag activity-bike-index-tagFull activity-bike-index-fullInline">已满</Text>
+                  ) : null}
+                </View>
               </View>
 
               {detail.difficulty ? (
@@ -735,7 +786,7 @@ export default function BikeActivityPage() {
 
                 ))}
 
-                <View className="activity-bike-index-publisherLink" onClick={() => setShowJoinListVerify(true)}>
+                <View className="activity-bike-index-publisherLink" onClick={() => openJoinList()}>
 
                   <Text>查看参与详情</Text>
 
@@ -770,6 +821,15 @@ export default function BikeActivityPage() {
               onClick={openJoinModal}
             >
               参加活动
+            </Button>
+          )}
+          {showFullJoinBtn && (
+            <Button
+              className="activity-bike-index-joinBtn activity-bike-index-joinBtnFull footer-action-btn"
+              disabled
+              hoverClass="none"
+            >
+              报名已满
             </Button>
           )}
         </View>
@@ -811,49 +871,12 @@ export default function BikeActivityPage() {
           bodyClassName="activity-bike-index-modalBody"
         >
           <Text className="activity-bike-index-modalTitle">仅活动创建者可查看</Text>
-          <Text className="share-poster-remark">请输入创建本活动时的姓名与电话，用于核验发布者身份</Text>
-          <Input className="form-input" placeholder="请输入姓名或昵称" value={joinListForm.name} onInput={(e) => setJoinListForm({ ...joinListForm, name: e.detail.value })} />
-          <Input className="form-input" placeholder="请输入电话号" type="number" value={joinListForm.phone} onInput={(e) => setJoinListForm({ ...joinListForm, phone: e.detail.value })} />
+          <Input className="form-input" placeholder="请输入管理凭证" value={joinListForm.manageKey} onInput={(e) => setJoinListForm({ manageKey: e.detail.value })} />
           <View className="activity-bike-index-modalActions">
             <Button size="mini" onClick={() => setShowJoinListVerify(false)}>取消</Button>
             <Button size="mini" type="primary" className="button-primary" onClick={onFetchJoinList}>提交</Button>
           </View>
         </AnimatedModal>
-
-        <AnimatedModal
-          visible={showPhoneKey}
-          onClose={() => setShowPhoneKey(false)}
-          maskClassName="activity-bike-index-modal"
-          bodyClassName="activity-bike-index-modalBody"
-        >
-          <Text className="activity-bike-index-modalTitle">获取发布者号码</Text>
-          {!organizerPhone ? (
-            <>
-              <Input className="form-input" placeholder="请输入口令" value={phoneKeyForm.key} onInput={(e) => setPhoneKeyForm({ key: e.detail.value })} />
-              <View className="activity-bike-index-modalActions">
-                <Button size="mini" onClick={() => setShowPhoneKey(false)}>取消</Button>
-                <Button size="mini" type="primary" className="button-primary" onClick={onFetchPhone}>提交</Button>
-              </View>
-            </>
-          ) : (
-            <>
-              <View className="activity-bike-index-phoneResult">
-                <Text className="activity-bike-index-phoneResultLabel">联系电话</Text>
-                <Text className="activity-bike-index-phoneResultValue">{organizerPhone}</Text>
-              </View>
-              <View className="activity-bike-index-modalActions activity-bike-index-modalActionsDivider">
-                <Button size="mini" onClick={() => setShowPhoneKey(false)}>关闭</Button>
-              </View>
-            </>
-          )}
-        </AnimatedModal>
-
-        <ShareKeyGate
-          visible={showShareKey}
-          activityId={detail._id}
-          onPass={openSharePoster}
-          onClose={() => setShowShareKey(false)}
-        />
 
         <SharePosterModal
           visible={showSharePoster && Boolean(shareKey)}
@@ -885,7 +908,7 @@ export default function BikeActivityPage() {
         <WxAuthModal
           visible={showAuthModal}
           onClose={() => setShowAuthModal(false)}
-          onSuccess={(profile) => openJoinWithProfile(profile)}
+          onSuccess={onAuthSuccess}
         />
 
       </View>
@@ -908,7 +931,31 @@ export default function BikeActivityPage() {
 
         action={
 
-          <Button size="mini" type="primary" className="button-primary" onClick={() => setShowDisclaimer(true)}>
+          <Button
+
+            size="mini"
+
+            type="primary"
+
+            className="button-primary"
+
+            onClick={async () => {
+
+              try {
+
+                await ensureWxSession();
+
+                setShowDisclaimer(true);
+
+              } catch {
+
+                showError('请先登录后再发起活动');
+
+              }
+
+            }}
+
+          >
 
             发起活动
 
@@ -944,6 +991,7 @@ export default function BikeActivityPage() {
         onAgree={async () => {
           setShowDisclaimer(false);
           try {
+            await ensureWxSession();
             const profile = await refreshWxProfile();
             if (hasWxIdentity(profile)) {
               setApplyForm((f) => ({
@@ -953,7 +1001,8 @@ export default function BikeActivityPage() {
               }));
             }
           } catch {
-            /* ignore */
+            showError('请先登录后再发起活动');
+            return;
           }
           setShowApply(true);
         }}
@@ -972,6 +1021,8 @@ export default function BikeActivityPage() {
         <Input className="form-input" placeholder="活动简介" value={applyForm.content} onInput={(e) => setApplyForm({ ...applyForm, content: e.detail.value })} />
         <Input className="form-input form-input--withHint" placeholder="活动口令" value={applyForm.key} onInput={(e) => setApplyForm({ ...applyForm, key: e.detail.value })} />
         <Text className="form-field-hint">用于限制无关人员报名挤占名额，扫码参与会自动带入；分享海报与查发布者电话时也可能需校验此口令</Text>
+        <Input className="form-input form-input--withHint" placeholder="管理凭证（必填）" value={applyForm.manageKey} onInput={(e) => setApplyForm({ ...applyForm, manageKey: e.detail.value })} maxlength={32} />
+        <Text className="form-field-hint">用于查看完整参与名单，请自行设置并妥善保管；与活动口令不同</Text>
         <Input
           className="form-input"
           placeholder="集合地点（可选，可输入）"

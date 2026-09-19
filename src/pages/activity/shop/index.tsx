@@ -166,7 +166,7 @@ export default function ShopActivityPage() {
   const quota = useMemo(() => {
     if (!detail) return null;
     const limit = Number(detail.limit);
-    const joined = detail.joinData?.length ?? 0;
+    const joined = Math.max(detail.joinCount ?? 0, detail.joinData?.length ?? 0);
     if (!Number.isFinite(limit) || limit <= 0) return null;
     return Math.max(0, limit - joined);
   }, [detail]);
@@ -301,8 +301,22 @@ export default function ShopActivityPage() {
 
         <View className="activity-shop-index-detailFooter">
           <ShareActionButton onClick={() => setShowSharePoster(true)} />
-          {active && (
-            <Button className="activity-shop-index-joinBtn button-primary footer-action-btn" type="primary" hoverClass="none" onClick={openJoinModal}>
+          {active && quota === 0 && (
+            <Button
+              className="activity-shop-index-joinBtn activity-shop-index-joinBtnFull footer-action-btn"
+              disabled
+              hoverClass="none"
+            >
+              名额已满
+            </Button>
+          )}
+          {active && (quota === null || quota > 0) && (
+            <Button
+              className="activity-shop-index-joinBtn button-primary footer-action-btn"
+              type="primary"
+              hoverClass="none"
+              onClick={openJoinModal}
+            >
               参与活动
             </Button>
           )}

@@ -20,6 +20,8 @@ export interface RequestConfig<D = unknown> {
   data?: D;
   params?: Record<string, unknown>;
   skipAuth?: boolean;
+  /** 为 true 时不自动弹出错误 toast（调用方自行处理） */
+  silent?: boolean;
 }
 
 function buildUrl(url: string, params?: Record<string, unknown>): string {
@@ -76,19 +78,25 @@ export async function NetWorkApi<T, D = unknown>(
     }
 
     if (res.statusCode === 401) {
-      showError('登录已过期，请重新登录');
+      if (!config.silent) showError('登录已过期，请重新登录');
       return Promise.reject(new ApiError('Unauthorized', true));
     }
 
     if (res.statusCode === 403) {
       const msg = extractReason(res.data, '无权限');
-      showError(msg);
-      return Promise.reject(new ApiError('Forbidden', true));
+      if (!config.silent) showError(msg);
+      return Promise.reject(new ApiError(msg, true));
+    }
+
+    if (res.statusCode === 429) {
+      const msg = extractReason(res.data, '操作过于频繁，请稍后再试');
+      if (!config.silent) showError(msg);
+      return Promise.reject(new ApiError(msg, true));
     }
 
     if (res.statusCode !== 200) {
       const msg = extractReason(res.data, `请求失败 (${res.statusCode})`);
-      showError(msg);
+      if (!config.silent) showError(msg);
       return Promise.reject(new ApiError(msg, true));
     }
 
@@ -100,11 +108,11 @@ export async function NetWorkApi<T, D = unknown>(
     return body;
   } catch (err) {
     if (err instanceof ApiError) {
-      if (!err.displayed) showError(err.message);
+      if (!err.displayed && !config.silent) showError(err.message);
       return Promise.reject(err);
     }
     const message = err instanceof Error ? err.message : '网络请求失败';
-    showError(message);
+    if (!config.silent) showError(message);
     return Promise.reject(new ApiError(message, true));
   }
 }

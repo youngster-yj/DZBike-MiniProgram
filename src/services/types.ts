@@ -38,7 +38,7 @@ export declare namespace API {
   }
 
   export interface ActiveFormResponse extends ActionSucceeded {
-    data: { _id: string };
+    data: { _id: string; manageKey?: string };
   }
 
   export interface UserPhoneResponse extends ActionSucceeded {
@@ -209,6 +209,7 @@ export interface ActiveFormParamsProps {
   time: number;
   endTime?: number;
   key: string;
+  manageKey: string;
   prize?: string;
   meetupShop?: string;
   limit?: number;

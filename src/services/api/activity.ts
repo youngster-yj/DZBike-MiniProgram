@@ -83,10 +83,14 @@ export function fetchShareKey(data: { activityId: string }) {
   });
 }
 
-export function fetchJoinList(data: { activityId: string; name: string; phone: string }) {
+export function fetchJoinList(
+  data: { activityId: string; manageKey?: string },
+  options?: { silent?: boolean },
+) {
   return NetWorkApi<API.JoinDataResponse>({
     method: 'post',
     url: 'activity/join/list',
     data,
+    silent: options?.silent,
   });
 }

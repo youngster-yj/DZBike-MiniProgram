@@ -977,6 +977,27 @@ button[size='mini'][type='primary'] {
   color: #64748b;
 }
 
+.activity-bike-index-tagFull {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.activity-bike-index-infoValueFull {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.activity-bike-index-countFull {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.activity-bike-index-fullInline {
+  margin: 0;
+}
+
 .activity-bike-index-infoList {
   display: flex;
   flex-direction: column;
@@ -1182,6 +1203,15 @@ button[size='mini'][type='primary'] {
   flex: 2;
   box-shadow: 0 4px 12px rgba(49, 130, 206, 0.22);
   border: 2px solid transparent !important;
+}
+
+.activity-bike-index-joinBtnFull {
+  flex: 2;
+  color: #94a3b8 !important;
+  background: #f1f5f9 !important;
+  border: 2px solid #e2e8f0 !important;
+  box-shadow: none;
+  opacity: 1 !important;
 }
 
 .activity-bike-index-disclaimerModal {
@@ -1530,6 +1560,15 @@ button[size='mini'][type='primary'] {
   flex: 2;
   box-shadow: 0 4px 12px rgba(49, 130, 206, 0.22);
   border: 2px solid transparent !important;
+}
+
+.activity-shop-index-joinBtnFull {
+  flex: 2;
+  color: #94a3b8 !important;
+  background: #f1f5f9 !important;
+  border: 2px solid #e2e8f0 !important;
+  box-shadow: none;
+  opacity: 1 !important;
 }
 
 .activity-shop-index-modal {
